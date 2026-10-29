@@ -80,5 +80,18 @@ if echo 'int main(void){return 0;}' | $CC -fsanitize=address,undefined -x c -o $
         run "scenario-$n-asan" "$B/drive_host_asan" "$s" "build/scenarios-asan/$n"
     done
 fi
+# the web pages: the engine as WebAssembly (needs clang with the wasm32 target), the installer and the
+# editor's link, under Node
+if command -v node >/dev/null 2>&1; then
+    if echo 'int f(void){return 0;}' | ${WASM_CC:-clang} --target=wasm32 -nostdlib -Wl,--no-entry -x c -o $B/wasm_probe.wasm - >/dev/null 2>&1; then
+        run web-build sh host/build_web.sh
+    else
+        echo "  note no clang for wasm32: web/fm1drive.wasm as committed"
+    fi
+    run web-install node tests/web_install_test.mjs
+    [ -f web/fm1drive.wasm ] && run web-editor node tests/web_editor_test.mjs
+else
+    echo "  skip web tests (no node)"
+fi
 [ $FAIL -eq 0 ] && echo "all tests passed" || echo "TESTS FAILED"
 exit $FAIL

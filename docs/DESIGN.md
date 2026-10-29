@@ -255,7 +255,7 @@ the erases evenly over the sectors (the test measures it). About **258 KB** hold
 - **256 song slots** (objects 0–255), sharing the store. A song is stored as `FDS1`, its title (for the
   song list, read without unpacking), then its `.fm1d` stream in LZ4 blocks of up to 4 KiB: empty
   cells cost nothing, repeated patterns are stored once, and the blocks compress further. The demo
-  song takes about a kilobyte; a dense 3-minute song a few. That is well over a hundred songs at once.
+  song takes 1.2 KB; a dense 3-minute song a few. That is well over a hundred songs at once.
 - The **library**: 24 banks of 16 instruments (objects 256–279; banks 0–15 user FM, 16–23 user PSG),
   each `FDL1` and its 16 instruments. A bank is rewritten when one of its slots is stored.
 - The settings and the panel calibration keep FM1-GM's own A/B objects.
