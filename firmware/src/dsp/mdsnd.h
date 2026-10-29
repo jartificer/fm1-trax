@@ -31,7 +31,7 @@ typedef struct {
     uint32_t fm_pos;                   /* Q16: how far between fm_prev and fm_next */
     int32_t fm_prev[2], fm_next[2];
     int32_t lp[2], lp_a;               /* output low-pass: state, coefficient Q16 */
-    int32_t dc[2], dc_x[2];            /* DC blocker */
+    int32_t dc[2], dc_x[2];            /* DC blocker: state (x256), last input */
     uint8_t region, filter;
     uint32_t vgm_samples;              /* 44.1 kHz samples rendered (for the VGM log's waits) */
     int8_t scope[MD_NCH][MD_SCOPE];
@@ -39,6 +39,7 @@ typedef struct {
     uint16_t peak[MD_NCH];             /* per channel, decays; for meters */
     void (*log)(void *ctx, int kind, int port, uint8_t reg, uint8_t val);   /* a VGM writer (or NULL) */
     void *log_ctx;
+    const uint8_t *dac_at;             /* the sample byte the DAC was last given (MD_LOG_DAC) */
 } md_t;
 
 enum { MD_LOG_FM, MD_LOG_PSG, MD_LOG_DAC };

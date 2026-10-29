@@ -60,6 +60,14 @@ void md_psg(md_t *m, uint8_t val)
         m->log(m->log_ctx, MD_LOG_PSG, 0, 0, val);
 }
 
+static void md_dac_write(md_t *m, const uint8_t *at)   /* a DAC byte from a sample (VGM: from its data bank) */
+{
+    opn2_write(&m->fm, 0, 0x2A, *at);
+    m->dac_at = at;
+    if (m->log)
+        m->log(m->log_ctx, MD_LOG_DAC, 0, 0x2A, *at);
+}
+
 void md_dac_play(md_t *m, const uint8_t *data, uint32_t len, uint32_t loop, uint32_t rate_hz)
 {
     m->dac.data = data;
@@ -69,7 +77,7 @@ void md_dac_play(md_t *m, const uint8_t *data, uint32_t len, uint32_t loop, uint
     m->dac.step = (uint32_t)(((uint64_t)rate_hz << 16) / m->fm_hz);
     m->dac.on = len != 0;
     if (m->dac.on)
-        md_fm(m, 0, 0x2A, data[0]);
+        md_dac_write(m, data);
 }
 
 void md_dac_stop(md_t *m)
@@ -101,7 +109,7 @@ static void fm_sample(md_t *m)
             }
         }
         if (i1 != i0 && m->dac.on)
-            md_fm(m, 0, 0x2A, m->dac.data[i1]);
+            md_dac_write(m, &m->dac.data[i1]);
     }
     m->fm_prev[0] = m->fm_next[0];
     m->fm_prev[1] = m->fm_next[1];
@@ -132,10 +140,11 @@ void md_render(md_t *m, int32_t *out, uint32_t n)
                 int32_t f = m->fm_prev[c] + (int32_t)(((int64_t)(m->fm_next[c] - m->fm_prev[c]) * (int32_t)m->fm_pos) >> 16);
                 int32_t v = f + psg[s] * 2 / 5, y;
                 m->lp[c] += (int32_t)(((int64_t)(v - m->lp[c]) * m->lp_a) >> 16);
-                /* DC blocker (the console's output capacitors): y = x - x' + 0.9995 y' */
-                y = m->lp[c] - m->dc_x[c] + (int32_t)(((int64_t)m->dc[c] * 65503) >> 16);
+                /* DC blocker (the console's output capacitors): y = x - x' + (1 - 1/2048) y', its
+                 * state in 1/256ths so that it settles to 0 (the ladder effect's offset goes) */
+                m->dc[c] += (m->lp[c] - m->dc_x[c]) * 256 - m->dc[c] / 2048;
                 m->dc_x[c] = m->lp[c];
-                m->dc[c] = y;
+                y = m->dc[c] / 256;
                 x[c] = y;
             }
             out[2u * s] += x[0];

@@ -25,9 +25,15 @@ if [ "${NO_NUKED:-0}" != 1 ]; then
     fi
 fi
 DSP="firmware/src/dsp/opn2.c firmware/src/dsp/psg.c firmware/src/dsp/mdsnd.c"
+TRK="firmware/src/trk/song.c firmware/src/trk/player.c firmware/src/trk/presets.c firmware/src/trk/presets_fm.c firmware/src/trk/vgm.c"
+mkdir -p build/gen
+python3 tools/gen_drums.py build/gen/drums.h >/dev/null
 # the FM-1 has no fused multiply-add; the host build must compute the same samples
 CFLAGS="-O2 -Wall -Wextra -ffp-contract=off"
 # shellcheck disable=SC2086
 cc $CFLAGS -o "$B/engine_test" tests/host/engine_test.c $DSP $REF -lm
 "$B/engine_test" ${1:+"$1"}
+# shellcheck disable=SC2086
+cc $CFLAGS -Ibuild/gen -o "$B/trk_test" tests/host/trk_test.c $TRK $DSP -lm
+"$B/trk_test" ${1:+"$1"}
 echo "all host tests passed"
