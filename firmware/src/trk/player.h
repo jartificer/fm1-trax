@@ -83,6 +83,7 @@ enum {
     PC_JAM_OFF,     /* a: channel */
     PC_MUTE,        /* a | b << 8 | c << 16: the mask */
     PC_RESET,       /* the song changed: chips to its settings */
+    PC_INS,         /* a: an instrument that was edited (its next note loads it again) */
 };
 int player_post(uint8_t cmd, uint16_t a, uint8_t b, uint8_t c);   /* 0 = queued */
 

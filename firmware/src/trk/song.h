@@ -113,3 +113,6 @@ uint32_t song_pool_free(const song_t *s);
 uint32_t song_write(const song_t *s, void (*put)(void *ctx, const uint8_t *b, uint32_t n), void *ctx);
 /* get returns the next byte or -1; returns 0 = read, < 0 = not a song / damaged (s is then a new song) */
 int song_read(song_t *s, int (*get)(void *ctx), void *ctx);
+/* one instrument, as the stream has it (the library keeps them so) */
+uint32_t ins_write(const ins_t *in, void (*put)(void *ctx, const uint8_t *b, uint32_t n), void *ctx);
+int ins_read(ins_t *in, int (*get)(void *ctx), void *ctx);

@@ -440,6 +440,22 @@ static void r_ins(rd_t *r, ins_t *in)
     }
 }
 
+uint32_t ins_write(const ins_t *in, void (*put)(void *, const uint8_t *, uint32_t), void *ctx)
+{
+    wr_t w = {put, ctx, 0};
+    w_ins(&w, in);
+    return w.n;
+}
+
+int ins_read(ins_t *in, int (*get)(void *), void *ctx)
+{
+    rd_t r = {get, ctx, 0};
+    r_ins(&r, in);
+    if (r.bad)
+        ins_init(in, INS_EMPTY);
+    return r.bad ? -1 : 0;
+}
+
 int song_read(song_t *s, int (*get)(void *), void *ctx)
 {
     rd_t r = {get, ctx, 0};

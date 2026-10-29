@@ -1,0 +1,31 @@
+# a new FM-1 plays its demo song: the pattern view follows, the stage view lights up
+wait 300
+tap HOME
+expect view 0
+expect nord 4
+wav demo.wav
+peakreset
+tap PLAY
+wait 1500
+expect playing 1
+expect level >3
+shot play_pattern.png
+turn ALGO 5
+wait 1200
+shot play_pattern_psg.png
+tap HOME
+wait 1500
+shot play_stage.png
+wait 4000
+expect play_ord >0
+tap HOME
+turn ALGO -5
+tap SEQ
+wait 500
+shot play_orders.png
+tap PLAY
+wait 300
+wavstop
+expect playing 0
+expect peak_db_max -1
+expect peak_db_min -30

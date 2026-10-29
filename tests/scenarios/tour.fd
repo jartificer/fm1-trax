@@ -1,0 +1,71 @@
+# a tour: the intro, then every view, with notes entered and played
+wait 700
+shot intro1.png
+wait 900
+shot intro2.png
+expect view 8
+tap PLAY
+expect view 0
+wait 400
+shot pattern_empty.png
+tap REC
+expect edit 1
+tapkey 7
+tapkey 11
+tapkey 14
+tapkey 19
+expect note0.0 49
+expect row 4
+turn ALGO 1
+tapkey 0
+tap ENV
+turn SELECT -6
+turn K3 5
+wait 300
+shot pattern_notes.png
+tap FX
+wait 100
+shot pattern_fx.png
+tap FX
+tap PLAY
+wait 800
+expect playing 1
+shot pattern_play.png
+tap HOME
+wait 600
+shot stage.png
+tap HOME
+tap SEQ
+wait 300
+shot orders.png
+tap SEQ
+wait 300
+shot song.png
+tap EDIT
+wait 300
+shot ins_tone.png
+tap ENV
+wait 200
+shot ins_env.png
+tap LFO
+wait 200
+shot ins_lfo.png
+tap FX
+wait 200
+shot ins_macro.png
+tap SEL
+wait 300
+shot library.png
+tap EDIT
+tap GLO
+wait 300
+shot songs.png
+tap SAVE
+wait 300
+expect slotused0 1
+expect dirty 0
+tap GLO
+wait 300
+shot setup.png
+tap PLAY
+expect playing 0

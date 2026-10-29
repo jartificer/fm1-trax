@@ -30,7 +30,7 @@ typedef struct {
     uint32_t fm_step;                  /* FM samples per output sample, Q16 */
     uint32_t fm_pos;                   /* Q16: how far between fm_prev and fm_next */
     int32_t fm_prev[2], fm_next[2];
-    int32_t lp[2], lp_a;               /* output low-pass: state, coefficient Q16 */
+    int32_t lp[2], lp_a;               /* output low-pass: state, coefficient Q14 */
     int32_t dc[2], dc_x[2];            /* DC blocker: state (x256), last input */
     uint8_t region, filter;
     uint32_t vgm_samples;              /* 44.1 kHz samples rendered (for the VGM log's waits) */
@@ -43,6 +43,9 @@ typedef struct {
 } md_t;
 
 enum { MD_LOG_FM, MD_LOG_PSG, MD_LOG_DAC };
+
+/* (n << 16) / d without 64-bit arithmetic; n < d << 15 */
+uint32_t q16_div(uint32_t n, uint32_t d);
 
 void md_init(md_t *m, uint32_t out_hz, int region, int chip, int filter);
 void md_set_filter(md_t *m, int filter);

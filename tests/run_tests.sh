@@ -1,13 +1,27 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
-# FM1-DRIVE host tests. The YM2612 is compared with Nuked-OPN2 (LGPL-2.1, fetched into build/ref at a
-# fixed commit, used by the tests only, never built into the firmware); without it (offline, or
-# NO_NUKED=1) the comparison is skipped and the rest still runs.
+# FM1-DRIVE host tests: the chips (the YM2612 compared with Nuked-OPN2, LGPL-2.1, fetched into
+# build/ref at a fixed commit, used by the tests only, never built into the firmware; without it,
+# offline or NO_NUKED=1, the comparison is skipped), the tracker, the flash store, the installer, and
+# the whole firmware app in the simulator (tests/scenarios/*.fd), with screenshots and audio in
+# build/scenarios/. With a built package (./build.sh) the update path is tested too.
 #   tests/run_tests.sh [WAVDIR]
-set -e
+set -u
 cd "$(dirname "$0")/.."
+CC="${CC:-cc}"
 B=build/host
-mkdir -p "$B" build/ref ${1:+"$1"}
+FAIL=0
+mkdir -p "$B" build/ref build/gen build/scenarios ${1:+"$1"}
+run() {
+    name="$1"; shift
+    if "$@" > "$B/$name.log" 2>&1; then
+        echo "  ok   $name"
+    else
+        echo "  FAIL $name (see $B/$name.log)"
+        tail -15 "$B/$name.log" | sed 's/^/       /'
+        FAIL=1
+    fi
+}
 NUKED_COMMIT=335747d78cb0abbc3b55b004e62dad9763140115
 NUKED=build/ref/Nuked-OPN2
 REF=""
@@ -21,19 +35,50 @@ if [ "${NO_NUKED:-0}" != 1 ]; then
     if [ -f "$NUKED/ym3438.c" ] && [ "$(git -C "$NUKED" rev-parse HEAD)" = "$NUKED_COMMIT" ]; then
         REF="-DWITH_NUKED -I$NUKED $NUKED/ym3438.c"
     else
-        echo "Nuked-OPN2 not available: the reference comparison is skipped"
+        echo "  note Nuked-OPN2 not available: the reference comparison is skipped"
     fi
 fi
 DSP="firmware/src/dsp/opn2.c firmware/src/dsp/psg.c firmware/src/dsp/mdsnd.c"
 TRK="firmware/src/trk/song.c firmware/src/trk/player.c firmware/src/trk/presets.c firmware/src/trk/presets_fm.c firmware/src/trk/vgm.c"
-mkdir -p build/gen
 python3 tools/gen_drums.py build/gen/drums.h >/dev/null
+python3 tools/gen_font.py build/gen/felucca_font.h >/dev/null
 # the FM-1 has no fused multiply-add; the host build must compute the same samples
-CFLAGS="-O2 -Wall -Wextra -ffp-contract=off"
+CFLAGS="-O2 -Wall -Wextra -Wdouble-promotion -ffp-contract=off"
 # shellcheck disable=SC2086
-cc $CFLAGS -o "$B/engine_test" tests/host/engine_test.c $DSP $REF -lm
-"$B/engine_test" ${1:+"$1"}
+run engine sh -c "$CC $CFLAGS -o $B/engine_test tests/host/engine_test.c $DSP $REF -lm && $B/engine_test ${1:-}"
 # shellcheck disable=SC2086
-cc $CFLAGS -Ibuild/gen -o "$B/trk_test" tests/host/trk_test.c $TRK $DSP -lm
-"$B/trk_test" ${1:+"$1"}
-echo "all host tests passed"
+run tracker sh -c "$CC $CFLAGS -Ibuild/gen -o $B/trk_test tests/host/trk_test.c $TRK $DSP -lm && $B/trk_test ${1:-}"
+run storage sh -c "$CC -O2 -Wall -Werror -o $B/storage_test tests/storage_test.c && $B/storage_test"
+run lz4 sh -c "$CC -O2 -Wall -Werror -o $B/lz4_test tests/host/lz4_test.c && $B/lz4_test"
+# the update path, against the firmware package (Felucca's tests; needs ./build.sh)
+if [ -f build/fm1drive.fwsc ]; then
+    run ota-entry sh -c "$CC -o $B/ota_test tests/ota_test.c && $B/ota_test build/fm1drive.fwsc"
+    if [ -z "${AC79_SDK:-}" ]; then
+        echo "  skip update-loader (needs AC79_SDK, as the build)"
+    else
+        run update-loader sh -c "head -c 100000 build/fm1drive.bin > $B/old_app.bin && \
+            python3 tools/fm1pkg_make.py $B/old_app.bin build/loader/ota.bin $B/old.fwsc >/dev/null && \
+            $CC -o $B/ldr_test tests/ldr_test.c && $B/ldr_test $B/old.fwsc build/fm1drive.fwsc"
+    fi
+else
+    echo "  skip update-path tests (no build/fm1drive.fwsc: run ./build.sh)"
+fi
+run installer python3 tests/install_test.py
+run host-build sh host/build_host.sh
+for s in tests/scenarios/*.fd; do
+    n=$(basename "$s" .fd)
+    mkdir -p "build/scenarios/$n"
+    run "scenario-$n" build/host/drive_host "$s" "build/scenarios/$n"
+done
+# the whole app again under AddressSanitizer / UBSan: a write past a buffer in the UI is silent otherwise
+if echo 'int main(void){return 0;}' | $CC -fsanitize=address,undefined -x c -o $B/asan_probe - >/dev/null 2>&1; then
+    run host-build-asan sh -c "HOST_CFLAGS='-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-sanitize=shift' \
+        sh host/build_host.sh && mv build/host/drive_host $B/drive_host_asan && sh host/build_host.sh"
+    for s in tests/scenarios/*.fd; do
+        n=$(basename "$s" .fd)
+        mkdir -p "build/scenarios-asan/$n"
+        run "scenario-$n-asan" "$B/drive_host_asan" "$s" "build/scenarios-asan/$n"
+    done
+fi
+[ $FAIL -eq 0 ] && echo "all tests passed" || echo "TESTS FAILED"
+exit $FAIL

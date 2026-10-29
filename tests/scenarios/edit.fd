@@ -1,0 +1,116 @@
+# editing: a new song, notes, a block copied and pasted, positions inserted, duplicated and deleted,
+# shorter patterns, the themes
+wait 300
+tap HOME
+tap GLO
+expect view 6
+turn SELECT 1
+tap ENV
+expect view 0
+expect nord 1
+expect rows 64
+expect dirty 0
+tap REC
+tapkey 0
+tapkey 2
+tapkey 4
+tap REC
+expect row 3
+expect note0.0 42
+expect note0.2 46
+expect dirty 1
+# rows 0..2 marked (SEL held, SELECT turned), copied (SEL), pasted at row 16 (SEL held)
+turn SELECT -3
+expect row 0
+press SEL
+turn SELECT 2
+release SEL
+expect blk 1
+wait 100
+shot block.png
+tap SEL
+expect blk 0
+turn SELECT 14
+expect row 16
+hold SEL 1200
+expect note0.16 42
+expect note0.17 44
+expect note0.18 46
+expect note0.19 0
+# the pasted block marked again and cleared (ENV)
+press SEL
+turn SELECT 2
+release SEL
+tap ENV
+expect note0.16 0
+expect note0.18 0
+expect note0.0 42
+# a key-off (ENV), then cleared again
+tap ENV
+expect note0.18 254
+expect row 19
+turn SELECT -1
+tap ENV
+expect note0.18 0
+# the orders: insert, duplicate, delete, the loop
+tap SEQ
+expect view 2
+tap ENV
+expect nord 2
+tap LFO
+expect nord 3
+wait 100
+shot orders_dup.png
+hold LFO 900
+expect nord 2
+turn K4 1
+expect loop 1
+turn K3 2
+expect nord 4
+# the song settings: 32 rows
+tap SEQ
+expect view 3
+turn SELECT 8
+turn K1 -32
+expect rows 32
+wait 100
+shot song_rows.png
+# the themes, each one drawn
+tap GLO
+tap GLO
+expect view 7
+turn K1 1
+expect theme 1
+tap HOME
+wait 300
+shot theme1.png
+tap GLO
+tap GLO
+turn K1 1
+tap HOME
+wait 300
+shot theme2.png
+tap GLO
+tap GLO
+turn K1 1
+tap HOME
+wait 300
+shot theme3.png
+tap GLO
+tap GLO
+turn K1 1
+tap HOME
+wait 300
+shot theme4.png
+tap GLO
+tap GLO
+turn K1 1
+expect theme 5
+tap HOME
+wait 300
+shot theme5.png
+# the theme stays after a reboot (setup saves when it is left)
+reboot
+wait 300
+tap HOME
+expect theme 5

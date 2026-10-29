@@ -18,7 +18,17 @@ void psg_reset(psg_t *p, uint32_t clock_hz, uint32_t out_hz)
         p->out[i] = 1;
     }
     p->lfsr = 0x8000;
-    p->step = (uint32_t)(((uint64_t)(clock_hz / 16u) << 16) / out_hz);
+    p->step = (clock_hz / 16u / out_hz) << 16;              /* (clock / 16 << 16) / out, in 32 bits */
+    {
+        uint32_t r = clock_hz / 16u % out_hz, i;
+        for (i = 0; i < 16u; i++) {
+            r <<= 1;
+            if (r >= out_hz) {
+                r -= out_hz;
+                p->step |= 1u << (15u - i);
+            }
+        }
+    }
 }
 
 void psg_write(psg_t *p, uint8_t v)

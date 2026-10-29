@@ -25,9 +25,23 @@ void md_set_filter(md_t *m, int filter)
     static const float FC[2] = {3390.0f, 8000.0f};
     m->filter = (uint8_t)filter;
     if (filter == MD_FILTER_NONE)
-        m->lp_a = 65536;
+        m->lp_a = 16384;
     else
-        m->lp_a = (int32_t)((1.0f - exp_neg(6.2831853f * FC[filter] / (float)m->out_hz)) * 65536.0f);
+        m->lp_a = (int32_t)((1.0f - exp_neg(6.2831853f * FC[filter] / (float)m->out_hz)) * 16384.0f);
+}
+
+uint32_t q16_div(uint32_t n, uint32_t d)
+{
+    uint32_t q = n / d, r = n % d, i;
+    for (i = 0; i < 16u; i++) {          /* long division, a bit at a time: r < d < 2^31 */
+        r <<= 1;
+        q <<= 1;
+        if (r >= d) {
+            r -= d;
+            q |= 1u;
+        }
+    }
+    return q;
 }
 
 void md_init(md_t *m, uint32_t out_hz, int region, int chip, int filter)
@@ -39,7 +53,7 @@ void md_init(md_t *m, uint32_t out_hz, int region, int chip, int filter)
     m->out_hz = out_hz;
     m->region = (uint8_t)region;
     m->fm_hz = (FM_CLK[region] + 72u) / 144u;
-    m->fm_step = (uint32_t)(((uint64_t)FM_CLK[region] << 16) / (144ull * out_hz));
+    m->fm_step = q16_div(FM_CLK[region] / 144u, out_hz) + q16_div(FM_CLK[region] % 144u, 144u * out_hz);
     opn2_reset(&m->fm, chip);
     psg_reset(&m->psg, PSG_CLK[region], out_hz);
     m->scope_div = 2;
@@ -74,7 +88,7 @@ void md_dac_play(md_t *m, const uint8_t *data, uint32_t len, uint32_t loop, uint
     m->dac.len = len;
     m->dac.loop = loop;
     m->dac.pos = 0;
-    m->dac.step = (uint32_t)(((uint64_t)rate_hz << 16) / m->fm_hz);
+    m->dac.step = q16_div(rate_hz, m->fm_hz);
     m->dac.on = len != 0;
     if (m->dac.on)
         md_dac_write(m, data);
@@ -137,9 +151,11 @@ void md_render(md_t *m, int32_t *out, uint32_t n)
                 fm_sample(m);
             }
             for (c = 0; c < 2u; c++) {
-                int32_t f = m->fm_prev[c] + (int32_t)(((int64_t)(m->fm_next[c] - m->fm_prev[c]) * (int32_t)m->fm_pos) >> 16);
+                /* 32-bit products only (the FM-1's compiler has no 64-bit helpers): the step is
+                 * 17 bits at most, the position 14, the filter's coefficient Q14 */
+                int32_t f = m->fm_prev[c] + (((m->fm_next[c] - m->fm_prev[c]) * (int32_t)(m->fm_pos >> 2)) >> 14);
                 int32_t v = f + psg[s] * 2 / 5, y;
-                m->lp[c] += (int32_t)(((int64_t)(v - m->lp[c]) * m->lp_a) >> 16);
+                m->lp[c] += ((v - m->lp[c]) * m->lp_a) >> 14;
                 /* DC blocker (the console's output capacitors): y = x - x' + (1 - 1/2048) y', its
                  * state in 1/256ths so that it settles to 0 (the ladder effect's offset goes) */
                 m->dc[c] += (m->lp[c] - m->dc_x[c]) * 256 - m->dc[c] / 2048;

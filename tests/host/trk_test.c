@@ -10,7 +10,7 @@
 #include "../../firmware/src/trk/player.h"
 #include "../../firmware/src/trk/presets.h"
 #include "../../firmware/src/trk/vgm.h"
-#include "demo_song.h"
+#include "../../firmware/src/trk/demo_song.h"
 
 song_t song;
 static int fails, checks;

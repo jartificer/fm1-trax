@@ -684,9 +684,9 @@ static void keyons(void)
 static void tick_rate(void)
 {
     /* the frame rate of the console's video: NTSC 59.92 Hz, PAL 49.70 Hz */
-    static const uint32_t FRAME_MHZ[2] = {59922743u, 49701459u};
-    uint64_t hz_m = song.tick_hz ? (uint64_t)song.tick_hz * 100000u : FRAME_MHZ[song.region & 1u];
-    player.tick_len = (uint32_t)(((uint64_t)player.md.out_hz << 16) * 1000000u / hz_m);
+    static const float FRAME_HZ[2] = {59.922743f, 49.701459f};
+    float hz = song.tick_hz ? (float)song.tick_hz * 0.1f : FRAME_HZ[song.region & 1u];
+    player.tick_len = (uint32_t)((float)player.md.out_hz * 65536.0f / hz);
 }
 
 static void silence(void)
@@ -821,6 +821,13 @@ static void do_cmd(uint8_t cmd, uint16_t a, uint8_t b, uint8_t c)
         player.playing = 0;
         player_reset_chips();
         break;
+    case PC_INS: {
+        int ch;
+        for (ch = 0; ch < NCH; ch++)
+            if (cur_ins[ch] == a)
+                cur_ins[ch] = 0xFF;            /* reloaded on its next note */
+        break;
+    }
     default:
         break;
     }

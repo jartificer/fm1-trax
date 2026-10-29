@@ -3,7 +3,7 @@
  * A minor at 150 BPM, bass, lead, stabs, the DAC kit, PSG arpeggios and hats. Built from text so
  * that it reads like a tracker's page. Shared by the host tests, the app and the web build. */
 #pragma once
-#include "../../firmware/src/trk/song.h"
+#include "song.h"
 
 static int demo_note(const char *s)        /* "A-4" / "C#5" -> 1..96 */
 {
