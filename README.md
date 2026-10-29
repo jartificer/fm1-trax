@@ -1,1 +1,76 @@
-# fm1-drive
+# FM1-DRIVE
+
+Custom firmware that turns the M-VAVE FM-1 into a **Sega Mega Drive / Genesis music tracker**. It
+emulates the console's two sound chips, the Yamaha YM2612 (six FM channels) and the SN76489 PSG
+(three square waves and noise), and gives you a pattern tracker in the style of Deflemask and
+Furnace, played from the FM-1's own keys and knobs.
+
+> **Status: in development.** Everything runs and is tested in the host simulator
+> (`tests/run_tests.sh`). It has not been tested on a real FM-1 yet. The firmware comes with no
+> warranty.
+
+## What it does
+
+- **The real chips, limits included.** 6 FM channels with 4 operators each, the 8 algorithms,
+  feedback, SSG-EG, the global LFO, FM3's extended mode (four independent operator pitches), and the
+  DAC on FM6 for samples. 3 PSG tone channels and the noise channel, with periodic and white noise.
+  The YM2612's 9-bit DAC ladder, the low-pass filter of the model 1 or model 2 console, and NTSC or
+  PAL timing.
+- **A tracker.** Up to 256 patterns per channel and 256 order positions, 1 to 256 rows, two speeds
+  (shuffle), row highlights, and Deflemask's Genesis effects (arpeggio, portamento, vibrato, volume
+  slide, pan, retrigger, operator levels, LFO, note cut and delay, and more).
+- **Instruments.** 128 FM presets in 16 groups, 32 PSG presets and a 48-sample drum kit. Load any of
+  them into a song and tweak it, or build your own. **256 user FM and 128 user PSG slots** in the
+  library.
+- **Lots of songs.** **256 song slots** sharing about 258 KB of flash. Songs are compressed, so the
+  demo song takes about 1 KB. Saves are power-safe: a song is replaced only once its new copy is
+  complete, and the flash wear is spread evenly.
+- **Fun to look at.** A boot intro with a star field, a chrome logo and a sine scroller; CRT
+  scanlines, copper bars and screen wipes; a stage view with scopes, a piano roll and a heat map of
+  the YM2612's registers. Six colour themes, including high-contrast and colour-blind-safe ones.
+- **Export.** VGM 1.71 export (to play in any VGM player, or on real hardware), and the songs and
+  library moved to and from a computer over USB MIDI SysEx.
+
+## Controls
+
+The four knobs always edit four things side by side. In the pattern they are the cell's note,
+instrument, volume and effect. In the FM editor they are the same parameter on the four operators,
+like faders on a mixer.
+
+| Button | |
+|---|---|
+| HOME | Pattern view; again: the stage view |
+| SEQ | Order list; again: song settings |
+| EDIT | Instrument editor (the instrument under the cursor); its SEL: the library |
+| GLO | Songs (load, save, new, delete); again: setup |
+| PLAY | Play and stop; held: play from the top |
+| REC | Edit mode: the keys write notes (and record live while playing) |
+| SAVE | Save the song |
+| ARP | Undo; again: redo |
+| PRESETS | The instrument the keys play |
+| SELECT / ALGORITHM | Row / channel in the pattern |
+| FX | The knobs switch to the effect columns |
+| SEL | Hold and turn SELECT or ALGORITHM to mark a block. Tap: copy. Hold 1 s: paste |
+| ENV | Key-off; with a block marked: clear it |
+| LFO | Mute the channel; held: solo |
+
+The full control map, view by view, is in [docs/DESIGN.md](docs/DESIGN.md#5-controls).
+
+## Building
+
+See [BUILDING.md](BUILDING.md).
+
+## Credits and licence
+
+FM1-DRIVE is GPL-3.0-only (see `LICENSE`). It is built on
+[FM1-GM](https://github.com/jartificer/fm1-gm)'s platform, which comes from
+[Felucca](https://github.com/hugelton/Felucca), [X0X](https://github.com/charlesvestal/fm1-x0x) and
+[FoMni](https://github.com/charlesvestal/fm1-fomni): the hardware layer, the update loader, the USB
+stack and the installer. The chip emulation, the tracker, the presets, the drum samples (synthesised
+by `tools/gen_drums.py`), the song store and the screens are new.
+
+The tests compare the YM2612 emulation with [Nuked-OPN2](https://github.com/nukeykt/Nuked-OPN2)
+(LGPL-2.1), which is downloaded for the tests only and is not part of the firmware.
+
+M-VAVE, Sega, Mega Drive and Genesis are trademarks of their owners. This project is not affiliated
+with them.

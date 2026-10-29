@@ -22,6 +22,10 @@
  *   leds                         print the lit buttons and keys
  *   expect WHAT VALUE            check state: exit 1 on mismatch; VALUE "<N" / ">N" is a bound
  *   reboot                       re-run boot from the simulated flash (persistence test)
+ *   sysex HEX ..                 a SysEx message to the link (the bytes between F0 and F7); the
+ *                                answer is printed (expect sxst: its status)
+ *   linkcopy SRC DST             object SRC read whole over the link and written to DST, as the web
+ *                                editor does, then read back and compared (link.c's object numbers)
  *   echo TEXT
  */
 #define OM_HOST 1

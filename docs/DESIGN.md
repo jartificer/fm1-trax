@@ -5,7 +5,8 @@ console's two sound chips, the Yamaha **YM2612** (OPN2) and the TI **SN76489** P
 with what they can do and nothing they can't. Songs export as `.vgm`, so what you write here plays in
 any VGM player, and on real hardware through a VGM-playing cart or driver.
 
-Status: this document is the plan. Stages are listed at the end.
+Status: stages 1–3 are written and tested in the host simulator; the device build and stage 4 (the web
+site) are in progress. Stages are listed at the end.
 
 ## 1. Platform
 
@@ -182,7 +183,7 @@ always edit four things side by side: in the pattern, the cell's four fields; in
 | SAVE | Save the song to its slot. In Songs: to the highlighted slot (a used slot asks twice) |
 | ARP | Undo (again: redo) |
 | OCT- / OCT+ | The keys' octave (0–7). Both held 5 s: update mode (as FM1-GM) |
-| PRESETS | The instrument the keys play and enter (the song's instruments, and past them, the library) |
+| PRESETS | The instrument the keys play and enter (the song's instruments; library instruments are loaded into one from the Library) |
 | keys | Play the instrument on the cursor's channel; in edit mode, also write the note and step down |
 | MASTER | Volume |
 
@@ -195,7 +196,7 @@ always edit four things side by side: in the pattern, the cell's four fields; in
 | KNOB 1–4 | NOTE, INSTRUMENT, VOLUME, EFFECT 1 value of the cell; FX flips them to FX1 command, FX1 value, FX2 command, FX2 value (the command knob runs through the effects by name) |
 | ENV | Key-off `===` at the cursor (the envelope's release); on a key-off, clears the cell |
 | LFO | Mute the channel; held: solo |
-| SEL held + SELECT / ALGORITHM | Mark a block (rows, channels). SEL: copy; SEL held 1 s: paste at the cursor; ENV: clear the block; KNOB 1 with a block: transpose it |
+| SEL held + SELECT / ALGORITHM | Mark a block (rows, channels). SEL: copy (with nothing marked: the cursor's whole pattern); SEL held 1 s: paste at the cursor; ENV: clear the block; KNOB 1 with a block: transpose it |
 
 ### Order view
 
@@ -228,7 +229,7 @@ DAC: KNOB 1 the sample, 2 root note, 3 rate, 4 loop.
 
 The eye-candy page, for playing a song to someone: a scope per channel, the YM2612's register map
 lighting up as it is written, the PSG's square waves, a 10-channel piano roll scrolling past and the
-song title in raster-bar chrome. LFO mutes/solos the channel ALGORITHM points at; KNOB 1–4 nothing.
+song title in raster-bar chrome. LFO mutes the channel ALGORITHM points at; KNOB 1–4 nothing.
 
 ### Look and feel
 
@@ -242,26 +243,31 @@ FM1-GM. All of it within the frame budget: the screen is drawn in strips and onl
 
 ### On the device
 
-The data area FM1-GM gives its songs (0x97000–0xDFFFF less the panel sector: 71 sectors, 284 KB) holds
-a **chunk store**: each 4 KiB sector is 16 chunks of 256 bytes; a chunk carries its object (song slot,
-library bank), the object's generation, its index and a CRC. A save writes a new generation into erased
-chunks and is committed by its last chunk; the old generation is left in place until the new one is
-complete, so a save cut off by power leaves the old song. Space is reclaimed by moving the live chunks
-out of the sector with the most stale ones and erasing it, one sector kept free for that.
+The data area FM1-GM gives its songs (0x97000–0xDFFFF less the two panel sectors at 0xDC000 and
+0xDD000: 70 sectors) holds a **chunk store** (`storage.c`): each 4 KiB sector is 16 chunks of 256
+bytes, a 20-byte header (object, version, part, parts in the version, length, CRC) and 236 bytes of
+data. A save writes a new version of the object into erased chunks; its last chunk carries the number
+of parts, so at boot each object is its newest complete version, and a save cut off by power leaves
+the old one. Space is reclaimed by erasing the sector with the most dead chunks, its live chunks
+copied out first, 16 chunks kept free for that; the choice starts from a moving cursor, which spreads
+the erases evenly over the sectors (the test measures it). About **258 KB** hold data.
 
-- **256 song slots**, sharing the store. A song is stored as a compact stream (empty cells cost
-  nothing, repeated patterns are stored once) and LZ-compressed: a typical 3-minute song is 4–10 KB, a
-  sketch under 1 KB. That is 30–70 full songs, or hundreds of sketches, at once.
-- The **library** (user FM, PSG, DAC) and the settings are objects in the same store.
+- **256 song slots** (objects 0–255), sharing the store. A song is stored as `FDS1`, its title (for the
+  song list, read without unpacking), then its `.fm1d` stream in LZ4 blocks of up to 4 KiB: empty
+  cells cost nothing, repeated patterns are stored once, and the blocks compress further. The demo
+  song takes about a kilobyte; a dense 3-minute song a few. That is well over a hundred songs at once.
+- The **library**: 24 banks of 16 instruments (objects 256–279; banks 0–15 user FM, 16–23 user PSG),
+  each `FDL1` and its 16 instruments. A bank is rewritten when one of its slots is stored.
+- The settings and the panel calibration keep FM1-GM's own A/B objects.
 - The web editor backs songs and the library up to the computer, so the device's room is a working
   set, not a limit.
 
-Optional (Setup, off by default): use the stock firmware's patch area (0xEA000–0xFBFFF, 72 KB, +25 %),
-which erases the stock firmware's saved patches.
+The stock firmware's patch area (0xEA000–0xFBFFF) is not used: the flash driver only lets the app write
+its own data area (`FL_STORE_OK`), which keeps the loader and the stock firmware safe.
 
 ### Song file (`.fm1d`)
 
-The same bytes as in flash: a header (magic `FM1D`, format version, title, author, timing, chip and
+What a song slot holds, unpacked: a header (magic `FM1D`, format version, title, author, timing, chip and
 filter settings), the instruments, the order list, the patterns (each row as a bitmask of the fields
 present, then those fields), then the song's own samples if any. The web editor reads and writes it,
 and moves it to and from the device over SysEx (`F0 7D 46 44 …`, the protocol at the top of
