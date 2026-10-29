@@ -1,0 +1,68 @@
+# the flash: a song and a library instrument survive a reboot, and the link moves both
+wait 300
+tap HOME
+expect view 0
+expect nord 4
+# a change to the demo, then saved to slot 0
+tap REC
+tapkey 0
+expect note0.0 42
+tap REC
+tap EDIT
+tap GLO
+wait 200
+expect view 6
+tap SAVE
+wait 200
+expect slotused0 1
+expect dirty 0
+# the song's first instrument into the library's USER FM bank
+tap EDIT
+tap SEL
+turn ALGO -2
+wait 200
+shot lib_user.png
+tap SAVE
+wait 200
+expect libused0 1
+expect libused1 0
+reboot
+wait 300
+tap HOME
+expect view 0
+expect slotused0 1
+expect note0.0 42
+expect nord 4
+expect dirty 0
+expect libused0 1
+# the link: the song in memory into slot 5, slot 5 into slot 6, then slot 6 deleted
+linkcopy 256 5
+expect slotused5 1
+expect song 5
+linkcopy 5 6
+expect slotused6 1
+sysex 7D 46 44 06 06 00
+expect sxst 0
+expect slotused6 0
+# a library bank, copied whole: USER FM 0..15 into 16..31
+linkcopy 512 513
+expect libused16 1
+sysex 7D 46 44 01
+expect sxst 0
+# a READ of an empty slot is refused
+sysex 7D 46 44 03 09 00 00 00 00
+expect sxst 1
+reboot
+wait 300
+tap HOME
+expect slotused0 1
+expect slotused5 1
+expect slotused6 0
+expect libused16 1
+expect song 0
+# (the slot in use, 6, was deleted: the first song in flash)
+expect note0.0 42
+tap PLAY
+wait 600
+expect playing 1
+expect level >3
