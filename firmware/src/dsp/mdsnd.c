@@ -146,8 +146,8 @@ void md_render(md_t *m, int32_t *out, uint32_t n)
             int32_t x[2];
             uint32_t ch;
             m->fm_pos += m->fm_step;
-            while (m->fm_pos >= 0x10000u) {
-                m->fm_pos -= 0x10000u;
+            while (m->fm_pos >= (1u << 16)) {
+                m->fm_pos -= (1u << 16);
                 fm_sample(m);
             }
             for (c = 0; c < 2u; c++) {

@@ -93,13 +93,13 @@ void psg_render(psg_t *p, int32_t *out, uint32_t n)
         uint32_t need = p->step, sum = 0;
         int32_t den = 0;
         while (need) {
-            uint32_t left = 0x10000u - p->frac, take = need < left ? need : left;
+            uint32_t left = (1u << 16) - p->frac, take = need < left ? need : left;
             for (i = 0; i < PSG_NCH; i++)
                 acc[i] += p->out[i] * (int32_t)(take >> 4);
             den += (int32_t)(take >> 4);
             p->frac += take;
             need -= take;
-            if (p->frac >= 0x10000u) {
+            if (p->frac >= (1u << 16)) {
                 p->frac = 0;
                 tick(p);
             }

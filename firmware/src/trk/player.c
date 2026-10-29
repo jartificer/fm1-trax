@@ -858,7 +858,7 @@ void player_render(int32_t *out, uint32_t n)
             n--;
             continue;
         }
-        if (player.tick_left < 0x10000u) {
+        if (player.tick_left < (1u << 16)) {
             tick();
             player.tick_left += player.tick_len;
             if (player.stop_at_end && !player.playing)
