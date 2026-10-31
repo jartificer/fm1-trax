@@ -63,6 +63,7 @@ else
 fi
 run storage sh -c "$CC -O2 -Wall -Werror -o $B/storage_test tests/storage_test.c && $B/storage_test"
 run lz4 sh -c "$CC -O2 -Wall -Werror -o $B/lz4_test tests/host/lz4_test.c && $B/lz4_test"
+run battery sh -c "$CC -O2 -Wall -Wextra -Werror -o $B/battery_test tests/host/battery_test.c && $B/battery_test"
 # the update path, against the firmware package (Felucca's tests; needs ./build.sh)
 if [ -f build/fm1drive.fwsc ]; then
     run ota-entry sh -c "$CC -o $B/ota_test tests/ota_test.c && $B/ota_test build/fm1drive.fwsc"

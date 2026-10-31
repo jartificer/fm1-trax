@@ -110,6 +110,11 @@ int32_t plat_enc(int role)
 uint32_t plat_master(void) { return master; }
 static int battery = 4;
 int plat_battery(void) { return battery; }
+int plat_battery_adc(void)
+{
+    static const int ADC[4] = {520, 545, 575, 600};   /* a reading inside each level (battery.h) */
+    return battery >= 0 && battery < 4 ? ADC[battery] : -1;
+}
 void plat_leds(uint32_t b, uint32_t k)
 {
     lit_btn = b;
@@ -519,6 +524,8 @@ static int expect(const char *what, const char *val)
         got = set.oct;
     else if (!strcmp(what, "song"))
         got = set.song;
+    else if (!strcmp(what, "battwarn"))             /* low-battery warnings shown */
+        got = (int)ui.batt_warns;
     else if (!strcmp(what, "dirty"))
         got = ui.dirty;
     else if (!strcmp(what, "theme"))

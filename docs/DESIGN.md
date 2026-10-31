@@ -219,6 +219,14 @@ always edit four things side by side: in the pattern, the cell's four fields; in
 | keys | Play the instrument on the cursor's channel; in edit mode, also write the note and step down |
 | MASTER | Volume |
 
+The header on every screen shows the battery as a small icon left of the song position: three bars,
+one in yellow when low, and a blinking red outline when empty. Nothing is shown on USB power (the
+FM-1 has no charger status line, so it cannot tell charging from full). When the battery reads empty
+for 5 s the header says BATTERY LOW (SAVE SONG when there are unsaved changes), again every 10
+minutes. Setup's BATTERY row shows the bars and the divider's ADC reading. The reading is taken by
+the main loop 20 times a second, never by the audio ISR; Felucca's thresholds (531, 561, 591) with
+4 counts of hysteresis (`app/battery.h`).
+
 ### Pattern view
 
 | Control | |

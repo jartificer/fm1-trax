@@ -260,7 +260,7 @@ static void splash(void)
 static void fm1_main(void)
 {
     int32_t knob = 512 * 16;
-    uint32_t last_frame = 0;
+    uint32_t last_frame = 0, batt_t = 0;
     {
         uint32_t f = irq_save();
         flash_ok = FL_FAR(fl_jedec_ram)() == 0x856014u;   /* the expected 1 MiB part, else RAM only */
@@ -331,9 +331,10 @@ static void fm1_main(void)
                 k10 = (uint32_t)(knob / 16);
                 master_q12 = (k10 * k10) >> 8;           /* 0 .. ~4096 */
             }
-            a = fm1_adc_read(FM1_ADC_BATT);
-            if (a > 0)                                   /* slow: the level sags as the audio draws */
-                batt_raw = batt_raw ? batt_raw + (a - batt_raw) / 32 : a;
+            if (fm1_ms - batt_t >= 50u) {                /* the battery: slow, 20 a second is plenty */
+                batt_t = fm1_ms;
+                batt_sample(fm1_adc_read(FM1_ADC_BATT));
+            }
         }
         {   /* OCT- + OCT+ held 5 s: update mode (Felucca's, unchanged) */
             static uint32_t t0, shown;

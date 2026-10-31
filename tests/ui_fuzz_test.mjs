@@ -36,6 +36,7 @@ function session() {
         } else if (k < 13) out.push(`turn ${pick(ENC)} ${rn(2) ? 1 + rn(3) : -1 - rn(3)} ${10 + rn(80)}`);
         else if (k < 17) out.push(`tap ${pick(BTN)}`);
         else if (k < 18 && rn(3) === 0) out.push("tap PLAY");
+        else if (k < 18 && rn(3) === 0) out.push(`battery ${rn(5)}`, ...(rn(4) ? [] : ["wait 5200"]));   // the low warning
         else out.push(`wait ${rn(400)}`);
     }
     for (const key of keys) out.push(`key ${key} up`);

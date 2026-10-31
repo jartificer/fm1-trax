@@ -1053,9 +1053,10 @@ static void songs_draw(void)
 }
 
 /* ---------------------------------------------------------------- setup --- */
-enum { SU_THEME, SU_CRT, SU_INTRO, SU_WIPES, SU_LEDS, SU_STEP, SU_FOLLOW, SU_MIDI, SU_VERSION, SU_CPU, NSU };
+enum { SU_THEME, SU_CRT, SU_INTRO, SU_WIPES, SU_LEDS, SU_STEP, SU_FOLLOW, SU_MIDI, SU_VERSION, SU_CPU, SU_BATT, NSU };
 static const char *const SU_NAME[NSU] = {"THEME", "CRT LINES", "BOOT INTRO", "WIPES", "BUTTON LIGHTS",
-                                         "EDIT STEP", "FOLLOW PLAY", "MIDI IN", "VERSION", "AUDIO LOAD"};
+                                         "EDIT STEP", "FOLLOW PLAY", "MIDI IN", "VERSION", "AUDIO LOAD",
+                                         "BATTERY"};
 static uint8_t setup_changed;
 
 static void su_value(int row, char *b)
@@ -1080,6 +1081,20 @@ static void su_value(int row, char *b)
         fmt_int(b + str_len(b), (int32_t)ui.cpu_peak);
         str_cpy(b + str_len(b), "%", 2);
         break;
+    case SU_BATT: {                            /* the bars, and the divider's reading (to check the thresholds) */
+        int v = plat_battery(), a = plat_battery_adc();
+        static const char *const L[4] = {"LOW", "1/3", "2/3", "3/3"};
+        if (v == 4) {
+            str_cpy(b, "USB POWER", 10);
+            break;
+        }
+        str_cpy(b, v >= 0 && v < 4 ? L[v] : "--", 4);
+        if (a >= 0) {
+            str_cpy(b + str_len(b), "  ADC ", 7);
+            fmt_int(b + str_len(b), a);
+        }
+        break;
+    }
     default: b[0] = 0; break;
     }
 }
