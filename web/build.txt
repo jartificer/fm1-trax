@@ -1,1 +1,1 @@
-FM1-DRIVE DEV build dbcc32f (device package from dbcc32f)
+FM1-DRIVE DEV build ecf5d02 (device package from ecf5d02)
