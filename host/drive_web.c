@@ -491,6 +491,9 @@ WEB(web_ins_init) void web_ins_init(int i, int type)
 }
 WEB(web_sample_name) const char *web_sample_name(int i) { return i >= 0 && (uint32_t)i < bank_n ? bank[i].name : ""; }
 WEB(web_sample_count) int web_sample_count(void) { return (int)bank_n; }
+WEB(web_sample_data) const uint8_t *web_sample_data(int i) { return i >= 0 && (uint32_t)i < bank_n ? bank[i].data : 0; }
+WEB(web_sample_len) uint32_t web_sample_len(int i) { return i >= 0 && (uint32_t)i < bank_n ? bank[i].len : 0; }
+WEB(web_sample_rate) int web_sample_rate(int i) { return i >= 0 && (uint32_t)i < bank_n ? bank[i].rate : 0; }
 WEB(web_is_carrier) int web_is_carrier(int alg, int op) { return ins_is_carrier(alg, op); }
 
 /* the effects, by name, for the page's lists */

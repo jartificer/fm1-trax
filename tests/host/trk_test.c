@@ -185,7 +185,7 @@ static void test_song(void)
         CHECK(same, "cells round-trip");
         CHECK(!memcmp(copy.order, song.order, sizeof(song.order)), "orders round-trip");
         CHECK(!memcmp(copy.ins, song.ins, sizeof(song.ins)), "instruments round-trip");
-        CHECK(!strcmp(song.title, "DRIVE ON") && song.lfo == 0x0B && song.nord == 4, "header round-trips");
+        CHECK(!strcmp(song.title, "Sunset Beach Galaxy") && song.loop == 2 && song.nord == 35, "header round-trips");
     }
     /* damaged streams are refused */
     sbuf[10] ^= 0xFF;
@@ -354,14 +354,15 @@ static void test_vgm(void)
     n = vgm_export(vgm, sizeof(vgm), 600);
     CHECK(n > 0x100 && !memcmp(vgm, "Vgm ", 4), "a VGM file (%u bytes)", n);
     CHECK(rd32(vgm + 4) == n - 4u && rd32(vgm + 8) == 0x171 && rd32(vgm + 0x2C) == 7670453u, "header");
-    /* 4 orders x 64 rows x 6 ticks at 59.92 Hz = 25.6 s */
+    /* 2224 rows of 3 and 4 ticks at 60 Hz = 129.7 s, looping to the third order (row 128) */
     {
-        double s = rd32(vgm + 0x18) / 44100.0;
-        CHECK(fabs(s - 4 * 64 * 6 / 59.922743) < 0.05, "length %.2f s", s);
+        double s = rd32(vgm + 0x18) / 44100.0, l = rd32(vgm + 0x20) / 44100.0;
+        CHECK(fabs(s - 2224 * 3.5 / 60) < 0.05, "length %.2f s", s);
+        CHECK(fabs(l - (2224 - 128) * 3.5 / 60) < 0.05, "loop %.2f s", l);
         printf("  demo song: %.1f s, %u bytes\n", s, n);
     }
     loop_at = rd32(vgm + 0x1C) + 0x1Cu;
-    CHECK(rd32(vgm + 0x1C) && rd32(vgm + 0x20) == rd32(vgm + 0x18), "loops to the start");
+    CHECK(rd32(vgm + 0x1C) != 0, "loops");
     /* every command is one the format knows, and the waits add up */
     for (pos = 0x100; pos < n && ok;) {
         uint8_t c = vgm[pos];
@@ -408,7 +409,7 @@ static void test_vgm(void)
 static void test_demo_wav(void)
 {
     int32_t *b;
-    uint32_t frames = 44100u * 26u;
+    uint32_t frames = 44100u * 30u;
     demo_song(&song);
     player_post(PC_PLAY, 0, 0, 0);
     b = render(frames);

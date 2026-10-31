@@ -129,6 +129,9 @@ Deflemask's Genesis set, so the format is familiar and `.dmf` songs can be impor
 | `E1xy` / `E2xy` note slide up / down | `E5xx` fine tune |
 | `ECxx` note cut | `EDxx` note delay |
 
+As in Deflemask, `01xx` / `02xx` slide on every tick, the row's first included, and a new note
+without `03xx` ends a tone portamento there (so an imported VGM's pitch follows the original).
+
 ## 4. Instruments
 
 ### Kinds
@@ -255,7 +258,7 @@ the erases evenly over the sectors (the test measures it). About **258 KB** hold
 - **256 song slots** (objects 0–255), sharing the store. A song is stored as `FDS1`, its title (for the
   song list, read without unpacking), then its `.fm1d` stream in LZ4 blocks of up to 4 KiB: empty
   cells cost nothing, repeated patterns are stored once, and the blocks compress further. The demo
-  song takes 1.2 KB; a dense 3-minute song a few. That is well over a hundred songs at once.
+  song (2 minutes, 35 orders) takes 4.6 KB; a dense 3-minute song a few. That is well over a hundred songs at once.
 - The **library**: 24 banks of 16 instruments (objects 256–279; banks 0–15 user FM, 16–23 user PSG),
   each `FDL1` and its 16 instruments. A bank is rewritten when one of its slots is stored.
 - The settings and the panel calibration keep FM1-GM's own A/B objects.
@@ -284,6 +287,14 @@ A static site, kept private until the repository is public (Pages is not enabled
   layout like Deflemask / Furnace: patterns, orders, instruments, the library; open and save `.fm1d`;
   read and write the FM-1's songs and library over USB; **export `.vgm`** (VGM 1.71, YM2612 + SN76489,
   DAC data block, loop) and `.wav`; import instruments, later Deflemask `.dmf` songs.
+- **VGM import** (`web/vgmimport.js`, also `tools/vgm2fm1d.mjs` on the command line, which made the
+  demo song): a Mega Drive VGM becomes a song by replaying its register log and fitting the tracker
+  to it. The row grid (speed and swing) is the coarsest that the note starts keep to; each key-on is
+  a note with its patch as an instrument (alike patches shared) and its carriers' level as the
+  volume; each PSG envelope is a note with a volume macro; slides and vibrato are chosen row by row
+  by running the player's own pitch model against the log's pitches; repeated patterns are stored
+  once; the loop point becomes the song's loop. The VGM's DAC samples are played by the kit drum
+  most like each (the song has no room for samples), and other chips' commands are skipped.
 
 ## 8. Stages
 

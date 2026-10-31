@@ -140,8 +140,10 @@ static struct {
     uint32_t held, t_down[NB];
     uint8_t hold_done[NB];
     uint32_t keys;
-    int8_t jam_key;                            /* the key sounding on the cursor's channel, -1 none */
-    uint8_t jam_ch;
+    int16_t jam_key;                           /* the key sounding (a panel key, or 100 + a MIDI note), -1 none */
+    uint8_t jam_ch, jam_ins;
+    int16_t keys_held[16];                     /* the keys down, oldest first, as jam_key counts them */
+    uint8_t keys_held_n;
     uint32_t enc_t[NE];
     uint8_t dirty;                             /* the song changed since it was loaded or saved */
     /* the stage view's history */
@@ -546,6 +548,45 @@ static void jam_on(int ch, int note, int ins)
         player_post(PC_JAM_OFF, ui.jam_ch, 0, 0);
     player_post(PC_JAM_ON, (uint16_t)ch, (uint8_t)note, (uint8_t)ins);
     ui.jam_ch = (uint8_t)ch;
+    ui.jam_ins = (uint8_t)ins;
+}
+
+/* the keys held, panel and MIDI: a key let go stops the note only if it is the one sounding, and
+ * then the newest key still down plays again (one note a channel, the last pressed, as a synth's
+ * mono mode), so overlapping notes neither cut each other off nor leave a held key silent */
+static int held_note(int id) { return id >= 100 ? id - 100 : key_note(id); }
+static void keys_held_drop(int id)
+{
+    int i, j;
+    for (i = j = 0; i < ui.keys_held_n; i++)
+        if (ui.keys_held[i] != id)
+            ui.keys_held[j++] = ui.keys_held[i];
+    ui.keys_held_n = (uint8_t)j;
+}
+static void key_down(int id)
+{
+    keys_held_drop(id);
+    if (ui.keys_held_n == 16)
+        keys_held_drop(ui.keys_held[0]);
+    ui.keys_held[ui.keys_held_n++] = (int16_t)id;
+    ui.jam_key = (int16_t)id;
+}
+static void key_up(int id)
+{
+    keys_held_drop(id);
+    if (ui.jam_key != id)
+        return;
+    while (ui.keys_held_n) {
+        int top = ui.keys_held[ui.keys_held_n - 1], n = held_note(top);
+        if (n) {
+            player_post(PC_JAM_ON, ui.jam_ch, (uint8_t)n, ui.jam_ins);
+            ui.jam_key = (int16_t)top;
+            return;
+        }
+        keys_held_drop(top);
+    }
+    player_post(PC_JAM_OFF, ui.jam_ch, 0, 0);
+    ui.jam_key = -1;
 }
 
 static void view_key(int note);                /* the views: a key went down (note) */
@@ -564,13 +605,10 @@ static void midi_poll(void)
         if (!set.midi_in || note < 1 || note > NOTE_MAX)
             continue;
         if ((st & 0xF0u) == 0x90u && d2) {
-            ui.jam_key = 100;                  /* a MIDI note: no panel key */
+            key_down(100 + note);
             view_key(note);
         } else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u) {
-            if (ui.jam_key == 100) {
-                player_post(PC_JAM_OFF, ui.jam_ch, 0, 0);
-                ui.jam_key = -1;
-            }
+            key_up(100 + note);
         }
     }
 }
@@ -611,14 +649,12 @@ static void input(void)
         if (down >> k & 1u) {
             int n = key_note(k);
             if (n) {
-                ui.jam_key = (int8_t)k;
+                key_down(k);
                 view_key(n);
             }
         }
-        if ((up >> k & 1u) && ui.jam_key == k) {
-            player_post(PC_JAM_OFF, ui.jam_ch, 0, 0);
-            ui.jam_key = -1;
-        }
+        if (up >> k & 1u)
+            key_up(k);
     }
     midi_poll();
     views_input();

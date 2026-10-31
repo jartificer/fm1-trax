@@ -342,7 +342,7 @@ static void note_on(int ch, uint8_t note)
     chan_t *c = &player.ch[ch];
     const ins_t *in = &song.ins[c->ins];
     c->note = note;
-    c->pitch = (int32_t)(note - 1u) * 64;
+    c->pitch = c->target = (int32_t)(note - 1u) * 64;   /* no tone portamento back to an old target */
     c->nslide_n = 0;
     c->vib_pos = 0;
     c->arp_pos = 0;
@@ -528,8 +528,8 @@ static void chan_tick(int ch)
     if (c->retrig && t && t % c->retrig == 0 && c->note)
         note_on(ch, c->note);
 
-    /* pitch slides */
-    if (c->slide && t)
+    /* pitch slides: every tick, the row's first too (as Deflemask) */
+    if (c->slide)
         c->pitch += c->slide;
     if (c->porta && c->target != c->pitch && c->note) {
         if (c->pitch < c->target) {
@@ -791,15 +791,12 @@ static void do_cmd(uint8_t cmd, uint16_t a, uint8_t b, uint8_t c)
         player.playing = 1;
         break;
     }
-    case PC_STOP: {
-        int ch;
+    case PC_STOP:
+        /* the song's effects, volumes and pending delays and cuts end with it, and the chips'
+         * caches start over (silence() leaves the levels muted): the keys play clean afterwards */
         player.playing = 0;
-        for (ch = 0; ch < NCH; ch++)
-            if (player.ch[ch].key)
-                note_off(ch);
-        silence();
+        player_reset_chips();
         break;
-    }
     case PC_JAM_ON:
         if (a < NCH && b >= 1u && b <= NOTE_MAX) {
             cell_t cl = {b, c, VAL_NONE, {0, 0}, {0, 0}};

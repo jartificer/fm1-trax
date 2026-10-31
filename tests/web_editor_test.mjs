@@ -5,6 +5,7 @@
 // emulator does. Run from the repo root:  node tests/web_editor_test.mjs  (after host/build_web.sh)
 import {readFileSync} from "node:fs";
 import {SongLink, MEMORY, BANK} from "../web/fm1link.js";
+import {importVgm} from "../web/vgmimport.js";
 
 let failed = 0;
 const ok = (cond, what) => {
@@ -24,7 +25,7 @@ ok(L[23] === 13 && L[28] === 7 && L[29] === 32, `layout: ${L[23]} channels, 7-by
 e.web_song_demo();
 const S = () => e.web_song();
 const nord = () => bytes(e, S() + L[11], 2)[0] | bytes(e, S() + L[11], 2)[1] << 8;
-ok(nord() === 4 && bytes(e, S() + L[8], 1)[0] === 64, "the demo song: 4 positions of 64 rows");
+ok(nord() === 35 && bytes(e, S() + L[8], 1)[0] === 64, "the demo song: 35 positions of 64 rows");
 // a cell written in place, as the page does
 const p = e.web_cell(9, 7, 3, 1);
 bytes(e, p, 7).set([49, 8, 12, 0x0B, 0, 0x22, 0]);
@@ -47,6 +48,25 @@ ok(e.web_playing() && peak > 0.05 && peak < 1, `it plays (peak ${peak.toFixed(2)
 e.web_post(1, 0, 0, 0);
 const v = e.web_vgm(900), vgm = bytes(e, e.web_io(), v);
 ok(v > 1000 && String.fromCharCode(...vgm.subarray(0, 4)) === "Vgm ", `VGM export: ${v} bytes`);
+// VGM import: the demo song's own VGM, as the editor's Import VGM does, and the demo from its asset
+const cs = p => { const m = new Uint8Array(e.memory.buffer); let s = ""; while (m[p]) s += String.fromCharCode(m[p++]); return s; };
+const kit = Array.from({length: e.web_sample_count()}, (_, i) => ({name: cs(e.web_sample_name(i)),
+    data: bytes(e, e.web_sample_data(i), e.web_sample_len(i)).slice(), rate: e.web_sample_rate(i)}));
+const exported = vgm.slice();
+let imp = importVgm(exported, {kit});
+const fit = Math.min(...Object.values(imp.info.match));
+ok(imp.info.title === "Sunset Beach Galaxy" && imp.info.loop && fit > 0.9, `our VGM imported: ${imp.info.orders} positions, worst pitch match ${(fit * 100).toFixed(0)}%`);
+bytes(e, e.web_io(), imp.song.length).set(imp.song);
+ok(e.web_song_read(imp.song.length) === 0 && nord() === imp.info.orders, "the import reads back in the engine");
+imp = importVgm(readFileSync("assets/songs/SunsetBeach.vgm"), {kit, dac: {0: "KICK TIGHT", 1: "SNARE", 2: "TOM HIGH", 3: "TOM MID", 4: "TOM LOW", 5: "HAT CLOSED", 6: "CRASH"}});
+e.web_song_demo();
+n = e.web_song_write();
+ok(eq(imp.song, bytes(e, e.web_io(), n)), `the demo song is SunsetBeach.vgm imported (${n} bytes)`);
+let notVgm = "";
+try { importVgm(Uint8Array.from([1, 2, 3, 4])); } catch (err) { notVgm = err.message; }
+ok(notVgm === "not a VGM file", "not a VGM: refused");
+e.web_post(1, 0, 0, 0);
+e.web_song_demo();
 // an instrument file round trip, and a preset
 e.web_preset(20, 0, 5);
 const ip = e.web_song() + L[14] + 20 * L[15];
@@ -91,7 +111,7 @@ await link.write(7, song);
 const back = await link.read(7);
 ok(eq(back, song), "WRITE the editor's song to slot 7, READ it back the same");
 const l2 = await link.list();
-ok(l2[7].used && l2[7].title === "DRIVE ON" && l2[7].bytes > 0 && l2[7].bytes < song.length, `LIST: slot 7 "${l2[7].title}", ${l2[7].bytes} bytes in flash (of ${song.length})`);
+ok(l2[7].used && l2[7].title === "Sunset Beach Galaxy" && l2[7].bytes > 0 && l2[7].bytes < song.length, `LIST: slot 7 "${l2[7].title}", ${l2[7].bytes} bytes in flash (of ${song.length})`);
 ok((await link.hello()).slot === 7, "the FM-1 switched to slot 7");
 // a bank: the editor's instrument 20 into entry 3 of bank 2
 e.web_bank_clear();

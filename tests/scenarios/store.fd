@@ -2,7 +2,7 @@
 wait 300
 tap HOME
 expect view 0
-expect nord 4
+expect nord 35
 # a change to the demo, then saved to slot 0
 tap REC
 tapkey 0
@@ -32,7 +32,7 @@ tap HOME
 expect view 0
 expect slotused0 1
 expect note0.0 42
-expect nord 4
+expect nord 35
 expect dirty 0
 expect libused0 1
 # the link: the song in memory into slot 5, slot 5 into slot 6, then slot 6 deleted
