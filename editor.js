@@ -161,12 +161,21 @@ function jamOff(code) {
     jams.delete(code);
     if (![...jams.values()].includes(ch)) x.web_post(PC.JAM_OFF, ch, 0, 0);
 }
-function jamChannel() {                            // the cursor's channel, or one that can play the instrument
+// the channel an instrument plays on, as the firmware's ins_ch_for (ui_pat.c): drums on FM6, a PSG
+// instrument with a noise macro on NOI, other PSG ones on the cursor's SQ1-SQ3 (else SQ1), FM patches
+// on the cursor's FM channel (else FM1)
+function jamChannel() {
     const ch = columns()[ui.col], t = mem()[S.ins(ui.ins) + L[16]];
     if (t === T.DAC) return 5;
-    if (t === T.PSG && !isPsg(ch)) return 6;
-    if (t === T.FM && isPsg(ch)) return 0;
+    if (t === T.PSG) return mem()[macP(ui.ins, 3)] ? 9 : ch >= 6 && ch <= 8 ? ch : 6;
+    if (t === T.FM) return isPsg(ch) ? 0 : ch;
     return ch;
+}
+const JAM_WHERE = {[T.DAC]: "drums play on FM6", [T.FM]: "FM instruments play on FM1-FM6"};
+function jamWhere() {                              // why a note would not sound in the cursor's column
+    const t = mem()[S.ins(ui.ins) + L[16]];
+    return t === T.PSG ? (mem()[macP(ui.ins, 3)] ? "noise instruments play on NOI" : "tone instruments play on SQ1-SQ3")
+                       : JAM_WHERE[t];
 }
 
 // ------------------------------------------------------------- the cursor ---
@@ -210,6 +219,8 @@ function writeCell(col, row, f) {                  // f(p, ch): edit the cell at
     return true;
 }
 function setNote(note) {
+    if (note && note <= NOTE_MAX && mem()[S.ins(ui.ins) + L[16]] !== T.EMPTY && jamChannel() !== columns()[ui.col])
+        return say(`not written: ${jamWhere()}`, true);
     change();
     writeCell(ui.col, ui.row, (p, ch) => {
         const m = mem();
