@@ -205,11 +205,18 @@ class MidoBackend:
         import mido
         self.mido = mido
 
+    def names(self, get):
+        try:
+            return list(dict.fromkeys(get()))
+        except Exception as e:                   # no MIDI system, or no permission to open it
+            raise InstallError("notfound", f"cannot open the computer's MIDI system ({e}); on Linux, "
+                               "check that ALSA's sequencer (/dev/snd/seq) is there and that you may use it")
+
     def input_names(self):
-        return list(dict.fromkeys(self.mido.get_input_names()))
+        return self.names(self.mido.get_input_names)
 
     def output_names(self):
-        return list(dict.fromkeys(self.mido.get_output_names()))
+        return self.names(self.mido.get_output_names)
 
     def open(self, in_name, out_name):
         return MidoLink(self, in_name, out_name)

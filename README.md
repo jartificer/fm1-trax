@@ -6,8 +6,8 @@ emulates the console's two sound chips, the Yamaha YM2612 (six FM channels) and 
 Furnace, played from the FM-1's own keys and knobs.
 
 > **Status: in development.** Everything runs and is tested in the host simulator
-> (`tests/run_tests.sh`). It has not been tested on a real FM-1 yet. The firmware comes with no
-> warranty.
+> (`tests/run_tests.sh`), and the author has started testing it on a real FM-1. The firmware comes
+> with no warranty: see [No warranty](#no-warranty) before you install it.
 
 ## What it does
 
@@ -30,6 +30,47 @@ Furnace, played from the FM-1's own keys and knobs.
   the YM2612's registers. Six colour themes, including high-contrast and colour-blind-safe ones.
 - **Export.** VGM 1.71 export (to play in any VGM player, or on real hardware), and the songs and
   library moved to and from a computer over USB MIDI SysEx.
+
+## No warranty
+
+FM1-DRIVE is provided "as is", without warranty of any kind, express or implied, including the implied
+warranties of merchantability and fitness for a particular purpose. Installing custom firmware can
+leave a device unable to start ("bricked") and may void its warranty. You install it at your own risk:
+the author is not responsible for a bricked or damaged device, lost songs or data, or any other harm
+that comes from using it. This is the same disclaimer as sections 15 and 16 of the [GPL-3.0](LICENSE),
+which governs. Know the [recovery steps](#recovery) before you install.
+
+## Installing
+
+Get `fm1drive.fwsc` (it is kept in `web/`, or build it yourself: see [BUILDING.md](BUILDING.md)). Then,
+with the FM-1 connected over USB:
+
+```
+pip install mido python-rtmidi
+python3 tools/fm1_install.py fm1drive.fwsc
+```
+
+python-rtmidi comes ready-built for Python 3.8 to 3.12 on Windows, macOS and Linux. With a newer
+Python, pip has to compile it, which needs a C++ compiler (and on Linux the ALSA headers,
+`libasound2-dev`); installing Python 3.12 alongside is simpler. [INSTALL.md](INSTALL.md) has the steps
+for Windows, macOS and Linux, and `tools/make_bundle.sh` packs it with the firmware and the installer
+into one zip.
+
+This works from the stock firmware or any Felucca-based firmware (FM1-GM, X0X, FoMni). To go back,
+install M-VAVE's stock package the same way, or with M-VAVE's updater.
+
+Or from the browser: the page in `web/` installs over Web MIDI in Chrome, Edge or Opera on a computer
+(the same update as `fm1_install.py`).
+
+Holding OCT- and OCT+ for 5 seconds puts FM1-DRIVE into update mode, for an installer that cannot
+reach it otherwise.
+
+### Recovery
+
+After two failed starts in a row the firmware comes up in a safe mode with USB on and no audio, so an
+installer can reach it; PLAY tries the firmware again. After four, it enters the chip's own update
+mode, the last resort: `tools/fm1_rescue.py` writes the stock firmware back through it (see the
+script's header and [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter)).
 
 ## Emulator and editor
 
