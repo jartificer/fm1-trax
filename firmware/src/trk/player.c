@@ -609,7 +609,9 @@ static void chan_tick(int ch)
         int tail = 0;
         if (mv->len && mv->rel != MACRO_NONE && mv->rel < mv->len)
             tail = mv->loop != MACRO_NONE && mv->loop > mv->rel ? PSG_REL_MAX : mv->len - mv->rel - 1;
-        if (c->note && (c->key || (c->released && c->rel_ticks < tail)))
+        /* an FM patch, a drum or an empty instrument has nothing for the PSG to play: silent, as an
+         * FM channel is for a PSG or a drum instrument */
+        if (in->type == INS_PSG && c->note && (c->key || (c->released && c->rel_ticks < tail)))
             att = 15 - c->vol * macro_val(c, in, MAC_VOL, 15) / 15;
         if (ch == CH_NOI && in->mac[MAC_NOISE].len && c->note) {
             int m = macro_val(c, in, MAC_NOISE, c->noise) & 7;

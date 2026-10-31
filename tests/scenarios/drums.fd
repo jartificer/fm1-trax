@@ -40,6 +40,42 @@ expect keyed 0
 key 0 up
 wait 800
 expect hanging 0
+# a noise instrument (0A, HAT) plays on NOI from any column: FM1, and SQ1 too
+turn PRESET 2
+expect ins 10
+key 0 down
+wait 30
+expect jamch 9
+expect keyed 0
+key 0 up
+wait 800
+turn ALGO 6
+expect ch 6
+key 0 down
+wait 30
+expect jamch 9
+key 0 up
+wait 800
+expect hanging 0
+# in edit mode it is not written into SQ1's column
+tap REC
+tapkey 0
+tap REC
+expect note6.0 0
+expect row 0
+# a tone instrument (08) from NOI's column plays on SQ1, not as noise
+turn ALGO 3
+expect ch 9
+turn PRESET -2
+expect ins 8
+key 0 down
+wait 30
+expect jamch 6
+key 0 up
+wait 800
+expect hanging 0
+turn ALGO -9
+expect ch 0
 # an FM instrument still plays on the cursor's channel and is written there
 turn PRESET -8
 expect ins 0

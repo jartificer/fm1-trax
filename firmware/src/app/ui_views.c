@@ -871,8 +871,7 @@ static void lib_audition(int note)
     song.ins[AUDITION_INS] = e;
     unlock();
     player_post(PC_INS, AUDITION_INS, 0, 0);
-    jam_on(e.type == INS_DAC ? CH_FM6 : e.type == INS_PSG ? (ui.lib_src == LS_PSG + 2 ? CH_NOI : CH_SQ1) : CH_FM1,
-           e.type == INS_DAC ? e.u.dac.root : note, AUDITION_INS);
+    jam_on(ins_ch_for(&e, cur_ch()), e.type == INS_DAC ? e.u.dac.root : note, AUDITION_INS);
 }
 
 static void lib_input(void)

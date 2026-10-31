@@ -13,26 +13,33 @@
 
 static int cur_ch(void) { return ch_at(ui.ch); }
 
-/* the channel the keys play an instrument on: the cursor's, if the instrument can sound there, or
- * else one that can (the DAC kit only plays on FM6, FM patches on the FM channels, PSG instruments on
- * the PSG ones), so a drum picked with PRESETS sounds as a drum wherever the cursor is */
-static int ins_ch(int ins)
+/* the channel an instrument plays on from the keys, whatever the cursor's channel, by one rule for
+ * every kind (the pattern view, the instrument editor, the library and the web editor all use it):
+ *   the DAC kit                           FM6
+ *   a PSG instrument with a noise macro   NOI (hats, snares, the noise presets)
+ *   any other PSG instrument              the cursor's SQ1-SQ3, else SQ1
+ *   an FM patch                           the cursor's FM channel, else FM1 */
+static int ins_ch_for(const ins_t *in, int ch)
 {
-    const ins_t *in = &song.ins[ins];
-    int ch = cur_ch();
     switch (in->type) {
     case INS_DAC: return CH_FM6;
-    case INS_PSG: return ch_is_psg(ch) ? ch : in->mac[MAC_NOISE].len ? CH_NOI : CH_SQ1;
+    case INS_PSG:
+        if (in->mac[MAC_NOISE].len)
+            return CH_NOI;
+        return ch_is_psg(ch) && ch != CH_NOI ? ch : CH_SQ1;
     case INS_FM: return ch_is_fm(ch) ? ch : CH_FM1;
     default: return ch;
     }
 }
+static int ins_ch(int ins) { return ins_ch_for(&song.ins[ins], cur_ch()); }
 
-/* why a note from the keys was not written: the instrument cannot play on the cursor's channel */
+/* why a note from the keys was not written: the instrument does not play on the cursor's channel */
 static void ins_ch_say(int ins)
 {
-    int t = song.ins[ins].type;
-    ui_say(t == INS_DAC ? "DRUMS PLAY ON FM6" : t == INS_PSG ? "PSG PLAYS ON SQ1-NOI" : "FM PLAYS ON FM1-FM6",
+    const ins_t *in = &song.ins[ins];
+    ui_say(in->type == INS_DAC ? "DRUMS PLAY ON FM6"
+           : in->type == INS_PSG ? (in->mac[MAC_NOISE].len ? "NOISE PLAYS ON NOI" : "TONES PLAY ON SQ1-SQ3")
+                                 : "FM PLAYS ON FM1-FM6",
            "NOT WRITTEN HERE");
 }
 
