@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// FM1-DRIVE's songs and library over SysEx (firmware/src/app/link.c): list, read, write and delete the
-// songs and the instrument banks on an FM-1 running FM1-DRIVE, over Web MIDI, or on the emulator
+// FM1-TRAX's songs and library over SysEx (firmware/src/app/link.c): list, read, write and delete the
+// songs and the instrument banks on an FM-1 running FM1-TRAX, over Web MIDI, or on the emulator
 // (emu.js) in another tab of this site. (FM1-GM's fm1link.js, reworked.)
 //
 //   host -> FM-1:  F0 7D 46 44 cmd args .. F7        FM-1 -> host:  F0 7D 46 44 cmd|40 status args .. F7
@@ -163,7 +163,7 @@ export async function findDevice(access) {
 }
 
 // the emulator in another tab of this site (app.js answers on this channel)
-export const CHANNEL = "fm1drive-link";
+export const CHANNEL = "fm1trax-link";
 export class ChannelTransport {
     constructor() {
         this.bc = new BroadcastChannel(CHANNEL);
