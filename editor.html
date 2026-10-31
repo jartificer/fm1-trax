@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FM1-DRIVE Editor</title>
-<meta name="description" content="A Mega Drive music tracker in the browser, on FM1-DRIVE's own engine: patterns, instruments, VGM and WAV export, and the songs and library of an FM-1 over USB.">
+<meta name="description" content="A Mega Drive music tracker in the browser, on FM1-DRIVE's own engine: patterns, instruments, Mega Drive VGM import, VGM and WAV export, and the songs and library of an FM-1 over USB.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Press+Start+2P&display=swap">
@@ -158,9 +158,10 @@ kbd { font: 500 11px var(--f-mono); border: 1px solid var(--rule); border-bottom
     <h1 class="logo">FM1&middot;DRIVE<small>EDITOR</small></h1>
     <div class="tools">
       <button id="b-new" type="button" title="A new song">New</button>
-      <button id="b-open" type="button" title="Open a .fm1d song">Open</button>
+      <button id="b-open" type="button" title="Open a .fm1d song (or a .vgm / .vgz, imported)">Open</button>
       <button id="b-save" type="button" title="Save the song as .fm1d">Save</button>
-      <button id="b-demo" type="button" title="The FM-1's demo song">Demo</button>
+      <button id="b-demo" type="button" title="The FM-1's demo song: Sunset Beach Galaxy by Tobikomi (YM2017, GPL-3.0)">Demo</button>
+      <button id="b-import" type="button" title="Import a Mega Drive .vgm or .vgz (logged by Deflemask, Furnace or an emulator) as a song to edit">Import VGM</button>
       <span class="sep"></span>
       <button id="b-vgm" type="button" title="Export the song as a .vgm file">VGM</button>
       <button id="b-wav" type="button" title="Render the song to a .wav file">WAV</button>
@@ -293,8 +294,18 @@ kbd { font: 500 11px var(--f-mono); border: 1px solid var(--rule); border-bottom
   </div>
 </div>
 
-<input type="file" id="f-song" accept=".fm1d" hidden>
+<input type="file" id="f-song" accept=".fm1d,.vgm,.vgz" hidden>
+<input type="file" id="f-vgm" accept=".vgm,.vgz" hidden>
 <input type="file" id="f-ins" accept=".fm1i" hidden>
+
+<dialog id="imp">
+  <h2 style="font:400 12px var(--f-pixel);color:var(--amber)">VGM import</h2>
+  <p id="imp-sum"></p>
+  <table id="imp-match"></table>
+  <ul id="imp-notes" class="muted"></ul>
+  <p class="muted">The song is rebuilt from the chips' register log: notes, instruments, volumes, slides and vibrato as tracker rows. The VGM's own drum samples are played by the kit's drums most like them. Check it by ear, then edit away; Undo brings back the song you had.</p>
+  <form method="dialog"><button class="go">Close</button></form>
+</dialog>
 
 <dialog id="help">
   <h2 style="font:400 12px var(--f-pixel);color:var(--amber)">Keys</h2>
