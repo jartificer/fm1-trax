@@ -42,8 +42,8 @@ Needs Linux x86-64 (or Docker on macOS: set `JIELI_DOCKER=1`).
    ```
 3. Build:
    ```
-   ./build.sh                    # build/fm1trax.fwsc, identity FM-1_700
-   ./build.sh --release 0.1      # build/fm1trax-0.1.fwsc, identity FM-1_7000100
+   ./build.sh                    # build/fm1trax.fwsc, identity FM-1_601
+   ./build.sh --release 0.1      # build/fm1trax-0.1.fwsc, identity FM-1_601000100
    ```
 
 Every package carries a revision number, shown on the boot screen: the number of commits in

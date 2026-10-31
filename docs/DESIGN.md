@@ -22,7 +22,7 @@ tracker, the song store, the UI and the web editor. The project is therefore GPL
 | Audio | I2S at 44.1 kHz, 256-frame halves (5.8 ms) |
 | RAM for big buffers | 344 KB (`.pool`) |
 | App slot | 581,564 bytes (code + presets + DAC samples) |
-| Package identity | `FM-1_700` (release `FM-1_7XXYYZZ`): FM1-GM is 6, FoMni 8, X0X 9 |
+| Package identity | `FM-1_601` (release `FM-1_601XXYYZZ`); `FM-1_700` is taken by other firmware |
 
 ## 2. The sound engine (`firmware/src/dsp/`)
 
