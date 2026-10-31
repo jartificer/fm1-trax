@@ -99,6 +99,17 @@ void song_init(song_t *s);                 /* a new song: one empty pattern, the
 /* the cell at a row of a channel's pattern; NULL for an empty (unallocated) pattern */
 cell_t *song_cell(song_t *s, int ch, int pat, int row);
 const cell_t *song_cell_ro(const song_t *s, int ch, int pat, int row);
+/* the channel the keys play an instrument on, with the cursor on channel ch (one rule for the
+ * device's views, its library and the web editor):
+ *   the DAC kit                                  FM6
+ *   a noise instrument                           NOI
+ *   any other PSG instrument                     ch if it is SQ1-SQ3, else SQ1
+ *   an FM patch                                  ch if it is an FM channel, else FM1
+ * A PSG instrument is a noise one if it has a noise macro, or if the song (s, as instrument ins;
+ * ins < 0: not in a song) uses it on NOI and never on SQ1-SQ3, as an imported song's NOISE ones,
+ * which set the noise mode with 20xy. */
+int song_ins_ch(const song_t *s, const ins_t *in, int ins, int ch);
+int song_ins_noise(const song_t *s, const ins_t *in, int ins);
 /* the same, allocating the pattern; NULL when the pool is full */
 cell_t *song_cell_w(song_t *s, int ch, int pat, int row);
 int song_pat_empty(const song_t *s, int ch, int pat);
