@@ -1,0 +1,117 @@
+# no hanging notes: a note sounded by the keys, the knobs or MIDI stops when its key is let go (or,
+# for a knob, soon after), whatever happens to the cell or the view meanwhile. Measured at the output.
+wait 300
+tap HOME
+tap GLO
+expect view 6
+turn SELECT 1
+tap ENV
+expect view 0
+tap REC
+# a note entered with K1 on an empty cell: heard, then gone
+turn K1 1
+wait 100
+peakreset
+wait 100
+expect peak_db_min -30
+wait 1500
+peakreset
+wait 200
+expect peak_db_max -50
+expect jams 0
+expect hanging 0
+# and deleted (ENV writes OFF, ENV again empties the cell)
+turn SELECT -1
+tap ENV
+turn SELECT -1
+tap ENV
+wait 1500
+peakreset
+wait 200
+expect peak_db_max -50
+expect jams 0
+expect hanging 0
+# a note entered with a key, the cell deleted while the key is down, the key let go
+key 0 down
+wait 100
+turn SELECT -1
+tap ENV
+tap ENV
+key 0 up
+wait 1500
+peakreset
+wait 200
+expect peak_db_max -50
+expect jams 0
+expect hanging 0
+# K1 turned while a key is down: the key's note comes back after the preview, and ends with the key
+key 2 down
+wait 100
+turn SELECT -1
+turn K1 1
+wait 800
+peakreset
+wait 200
+expect peak_db_min -30
+key 2 up
+wait 1500
+peakreset
+wait 200
+expect peak_db_max -50
+expect jams 0
+expect hanging 0
+# K1 on a note, the key's note on another channel: both end
+turn ALGO 1
+key 4 down
+wait 100
+turn ALGO -1
+turn K1 -1
+wait 100
+key 4 up
+wait 1500
+peakreset
+wait 200
+expect peak_db_max -50
+expect jams 0
+expect hanging 0
+# a key down while the view changes, let go in the other view
+key 5 down
+wait 100
+tap EDIT
+key 5 up
+tap HOME
+wait 1500
+peakreset
+wait 200
+expect peak_db_max -50
+expect jams 0
+expect hanging 0
+# MIDI on, the cell deleted, MIDI off
+midi 90 3C 64
+wait 100
+tap ENV
+midi 80 3C 00
+wait 1500
+peakreset
+wait 200
+expect peak_db_max -50
+expect jams 0
+expect hanging 0
+tap REC
+# while the song plays: a note entered with K1 and deleted, then stop
+turn SELECT -8
+tap REC
+tap PLAY
+wait 200
+turn K1 1
+wait 100
+tap ENV
+wait 2000
+tap PLAY
+tap REC
+wait 600
+peakreset
+wait 200
+expect peak_db_max -50
+expect jams 0
+expect hanging 0

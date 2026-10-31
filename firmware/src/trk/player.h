@@ -41,6 +41,7 @@ typedef struct {
     uint8_t nslide_speed;
     uint8_t pan;                       /* FM: bit 7 left, bit 6 right */
     uint8_t mpos[NMAC], released;
+    uint8_t rel_ticks;                 /* ticks since the release (stops at 255) */
     int16_t mpitch;                    /* the pitch macro's sum */
     uint8_t noise;                     /* NOI: bit 2 white, bits 0-1 rate */
     uint8_t tl[4];                     /* FM: 12xx-15xx overrides, 0xFF none */
@@ -92,10 +93,12 @@ void player_render(int32_t *out, uint32_t n);   /* the audio interrupt: n stereo
  * block and resets the player and the chips (player_guard_trips counts it) */
 #define PLAYER_CLIP 32767
 #define PLAYER_GUARD 262144
+#define PSG_REL_MAX 240        /* ticks a PSG volume macro's loop after the release may go on (4 s at 60 Hz) */
 extern volatile uint32_t player_guard_trips;
 extern volatile int32_t player_raw_peak;   /* the last block's peak before the clip */
 #ifdef OM_HOST
 void player_test_poison(void);
+uint32_t player_hanging(void);
 #endif
 
 /* for exports and tests: run the commands now, play the song to its loop */

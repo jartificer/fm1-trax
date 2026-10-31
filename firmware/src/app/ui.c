@@ -140,7 +140,9 @@ static struct {
     uint32_t held, t_down[NB];
     uint8_t hold_done[NB];
     uint32_t keys;
-    int16_t jam_key;                           /* the key sounding (a panel key, or 100 + a MIDI note), -1 none */
+    int16_t jam_key;                           /* the key sounding (a panel key, or 100 + a MIDI note), -1 none,
+                                                * JAM_TIMED a knob's preview, which stops at jam_until */
+    uint32_t jam_until;
     uint8_t jam_ch, jam_ins;
     int16_t keys_held[16];                     /* the keys down, oldest first, as jam_key counts them */
     uint8_t keys_held_n;
@@ -542,13 +544,31 @@ static int key_note(int k)
     return n >= 1 && n <= NOTE_MAX ? n : 0;
 }
 
+#define JAM_TIMED (-2)
+#define JAM_PREVIEW_MS 350u
+
 static void jam_on(int ch, int note, int ins)
 {
-    if (ui.jam_key >= 0 && ui.jam_ch != ch)
+    if (ui.jam_key != -1 && ui.jam_ch != ch)
         player_post(PC_JAM_OFF, ui.jam_ch, 0, 0);
     player_post(PC_JAM_ON, (uint16_t)ch, (uint8_t)note, (uint8_t)ins);
     ui.jam_ch = (uint8_t)ch;
     ui.jam_ins = (uint8_t)ins;
+}
+
+/* a note heard without a key held (a knob changing a cell's note): it stops by itself shortly, or
+ * when a key takes the channel over, so nothing is left sounding with no key to let go */
+static void jam_preview(int ch, int note, int ins)
+{
+    jam_on(ch, note, ins);
+    ui.jam_key = JAM_TIMED;
+    ui.jam_until = plat_ms() + JAM_PREVIEW_MS;
+}
+static void jam_resume(void);
+static void jam_timeout(void)
+{
+    if (ui.jam_key == JAM_TIMED && (int32_t)(plat_ms() - ui.jam_until) >= 0)
+        jam_resume();                          /* a key still down plays on */
 }
 
 /* the keys held, panel and MIDI: a key let go stops the note only if it is the one sounding, and
@@ -571,11 +591,9 @@ static void key_down(int id)
     ui.keys_held[ui.keys_held_n++] = (int16_t)id;
     ui.jam_key = (int16_t)id;
 }
-static void key_up(int id)
+/* the newest key still down sounds again on the jam channel; none: the channel stops */
+static void jam_resume(void)
 {
-    keys_held_drop(id);
-    if (ui.jam_key != id)
-        return;
     while (ui.keys_held_n) {
         int top = ui.keys_held[ui.keys_held_n - 1], n = held_note(top);
         if (n) {
@@ -587,6 +605,12 @@ static void key_up(int id)
     }
     player_post(PC_JAM_OFF, ui.jam_ch, 0, 0);
     ui.jam_key = -1;
+}
+static void key_up(int id)
+{
+    keys_held_drop(id);
+    if (ui.jam_key == id)
+        jam_resume();
 }
 
 static void view_key(int note);                /* the views: a key went down (note) */
@@ -602,9 +626,11 @@ static void midi_poll(void)
     while (plat_midi_in(&pkt)) {
         uint32_t st = pkt >> 8 & 0xFFu, d1 = pkt >> 16 & 0x7Fu, d2 = pkt >> 24 & 0x7Fu;
         int note = (int)d1 - 11;
-        if (!set.midi_in || note < 1 || note > NOTE_MAX)
+        if (note < 1 || note > NOTE_MAX)
             continue;
         if ((st & 0xF0u) == 0x90u && d2) {
+            if (!set.midi_in)                  /* MIDI in off: no new notes, but held ones still end */
+                continue;
             key_down(100 + note);
             view_key(note);
         } else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u) {
@@ -658,6 +684,7 @@ static void input(void)
     }
     midi_poll();
     views_input();
+    jam_timeout();
 }
 
 /* the lights: the view's button, PLAY, REC, FX, the keys held */

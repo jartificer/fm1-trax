@@ -563,6 +563,13 @@ static int expect(const char *what, const char *val)
         got = song.ins[atoi(what + 3)].u.fm.alg;
     else if (!strncmp(what, "libused", 7))
         got = lib_used(atoi(what + 7));
+    else if (!strcmp(what, "jams")) {               /* channels the keys play (none once they are up) */
+        int c;
+        got = 0;
+        for (c = 0; c < NCH; c++)
+            got += player.ch[c].jam != 0;
+    } else if (!strcmp(what, "hanging"))            /* what sounds with no key down (the song stopped) */
+        got = player.playing ? 0 : (int)player_hanging();
     else if (!strcmp(what, "level")) {              /* the loudest channel's level now */
         int c;
         got = 0;

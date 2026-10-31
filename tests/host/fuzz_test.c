@@ -3,7 +3,8 @@
  * effect with any value, any timing), random live commands between the blocks (play, stop, the
  * keys, mute, reset, instrument edits), and damaged song streams through song_read, all rendered
  * by the player and the chips. Every sample must stay inside the range the device scales to its
- * 24-bit output without wrapping, and a stop must go quiet.
+ * 24-bit output without wrapping, and a stop must go quiet. The keys are fuzzed for hanging notes too:
+ * once every key is let go, nothing may go on sounding (player_hanging).
  *
  * The safety net itself (player_render) is tested first: a poisoned engine trips it once, goes
  * silent, and the keys play again.
@@ -219,6 +220,51 @@ static void play_fuzzed(int blocks)
     block_peak();
 }
 
+/* hanging notes: the keys played (song stopped, or playing and then stopped by the song's end or a
+ * pause in between), instruments changed meanwhile, every key let go: then nothing may sound once the
+ * releases have run out (PSG_REL_MAX ticks at the slowest tick rate, 50 Hz) */
+static void jam_session(int events)
+{
+    uint32_t held = 0, left = 0;
+    int e, q;
+    player_post(PC_RESET, 0, 0, 0);
+    for (e = 0; e < events; e++) {
+        int k = rn(10), ch = rn(NCH);
+        if (k < 4) {
+            player_post(PC_JAM_ON, (uint16_t)ch, (uint8_t)(1 + rn(NOTE_MAX)), (uint8_t)rn(16));
+            held |= 1u << ch;
+        } else if (k < 7) {
+            player_post(PC_JAM_OFF, (uint16_t)ch, 0, 0);
+            held &= ~(1u << ch);
+        } else if (k == 7)
+            rnd_ins(&song.ins[rn(12)]);
+        else if (k == 8)
+            player_post(PC_INS, (uint16_t)rn(16), 0, 0);
+        else if (rn(4) == 0)
+            player_post(PC_MUTE, (uint16_t)rnd(), (uint8_t)rnd(), 0);
+        for (q = rn(6); q >= 0; q--)
+            block_peak();
+    }
+    for (e = 0; e < NCH; e++)
+        if (held >> e & 1u)
+            player_post(PC_JAM_OFF, (uint16_t)e, 0, 0);
+    for (q = 0; q < 900; q++) {                /* 5.2 s */
+        block_peak();
+        if (!(left = player_hanging()))
+            break;
+    }
+    if (left && fails < 20) {
+        fails++;
+        printf("FAIL %s: a hanging note 5 s after the keys were let go (channels %#x)\n", where, left);
+    }
+    for (e = 0; e < NCH; e++)
+        if (player.ch[e].jam && fails < 20) {
+            fails++;
+            printf("FAIL %s: channel %d still the keys' after they were let go\n", where, e);
+            break;
+        }
+}
+
 /* the stream through song_read, damaged: bits flipped, bytes changed, cut short, or noise */
 static uint8_t sbuf[1 << 16], dbuf[1 << 16];
 static uint32_t slen, dlen, spos;
@@ -288,6 +334,8 @@ int main(int argc, char **argv)
         snprintf(where, sizeof where, "seed %d, random song", s);
         rnd_song();
         play_fuzzed(120 + rn(200));
+        snprintf(where, sizeof where, "seed %d, keys", s);
+        jam_session(20 + rn(60));
         /* a damaged copy of a song through song_read, then played */
         if (s % 2)
             demo_song(&song);

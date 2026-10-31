@@ -194,8 +194,7 @@ static void pat_knob(int k, int32_t d)
                 c->note = (uint8_t)clampi(c->note + d, 1, NOTE_MAX);
             }
             ui.last_note = c->note;
-            jam_on(ch, c->note, c->ins == VAL_NONE ? ui.ins : c->ins);
-            ui.jam_key = -1;
+            jam_preview(ch, c->note, c->ins == VAL_NONE ? ui.ins : c->ins);
             break;
         case 1: {                              /* the instrument; below 00: none */
             int v = c->ins == VAL_NONE ? -1 : c->ins;
