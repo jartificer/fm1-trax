@@ -1,0 +1,47 @@
+# the keys play the cursor's channel: after a song has played and stopped too, and a key held keeps
+# sounding when a newer one is let go (panel keys and MIDI). Measured at the audio output.
+wait 300
+tap HOME
+expect view 0
+tap PLAY
+wait 3000
+tap PLAY
+wait 600
+expect playing 0
+key 0 down
+wait 100
+peakreset
+wait 200
+expect peak_db_min -30
+key 0 up
+wait 800
+# overlapping: 0 down, 4 down, 4 up: key 0's note goes on
+key 0 down
+wait 100
+key 4 down
+wait 100
+key 4 up
+wait 300
+peakreset
+wait 200
+expect peak_db_min -30
+key 0 up
+wait 800
+peakreset
+wait 200
+expect peak_db_max -50
+# MIDI the same: C-4 on, D-4 on, C-4 off leaves D-4 sounding; D-4 off stops it
+midi 90 3C 64
+wait 100
+midi 90 3E 64
+wait 100
+midi 80 3C 00
+wait 300
+peakreset
+wait 200
+expect peak_db_min -30
+midi 80 3E 00
+wait 800
+peakreset
+wait 200
+expect peak_db_max -50
