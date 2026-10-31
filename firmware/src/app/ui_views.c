@@ -1365,14 +1365,7 @@ static void view_key(int note)
         pat_key(note);
         return;
     }
-    if (ui.view == V_INS) {                    /* audition on a channel the instrument can play on */
-        const ins_t *in = cur_ins();
-        int ch = in->type == INS_PSG ? (ch_is_psg(cur_ch()) ? cur_ch() : CH_SQ1)
-                                     : in->type == INS_DAC ? CH_FM6 : (ch_is_fm(cur_ch()) ? cur_ch() : CH_FM1);
-        jam_on(ch, note, ui.ins);
-        return;
-    }
-    jam_on(cur_ch(), note, ui.ins);
+    jam_on(ins_ch(ui.ins), note, ui.ins);     /* on a channel the instrument can play on */
 }
 
 static void views_input(void)
