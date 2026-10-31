@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* FM1-DRIVE: the Mega Drive's sound (mdsnd.h). */
 #include "mdsnd.h"
+#include "dsp_hot.h"
 
 /* the console's clocks: the YM2612 runs at the 68000's clock / 144 a sample, the PSG at the Z80's */
 static const uint32_t FM_CLK[2] = {7670453u, 7600489u};
@@ -74,9 +75,11 @@ void md_psg(md_t *m, uint8_t val)
         m->log(m->log_ctx, MD_LOG_PSG, 0, 0, val);
 }
 
-static void md_dac_write(md_t *m, const uint8_t *at)   /* a DAC byte from a sample (VGM: from its data bank) */
+/* a DAC byte from a sample (VGM: from its data bank): register 0x2A, as opn2_write takes it, written
+ * here directly (inlined in the hot loop, which runs from RAM on the FM-1) */
+DSP_INLINE void md_dac_write(md_t *m, const uint8_t *at)
 {
-    opn2_write(&m->fm, 0, 0x2A, *at);
+    m->fm.dac = (uint16_t)((m->fm.dac & 1u) | ((uint32_t)(*at ^ 0x80u) << 1));
     m->dac_at = at;
     if (m->log)
         m->log(m->log_ctx, MD_LOG_DAC, 0, 0x2A, *at);
@@ -106,55 +109,91 @@ void md_mute(md_t *m, uint32_t mask)
     m->psg.mute = (uint8_t)((mask >> 6) & 15u);
 }
 
-static void fm_sample(md_t *m)
+/* the DAC before an FM sample, the driver's loop as the Z80 runs it: the sample byte it moves to, or
+ * NULL (register 0x2A written into the chip state; the log is md_render's, at the sample's time) */
+DSP_INLINE const uint8_t *dac_step(md_t *m)
 {
-    int32_t l, r;
-    if (m->dac.on) {                                        /* the driver's loop, as the Z80 runs it */
-        uint32_t i0 = m->dac.pos >> 16, i1;
-        m->dac.pos += m->dac.step;
-        i1 = m->dac.pos >> 16;
-        if (i1 >= m->dac.len) {
-            if (m->dac.loop < m->dac.len) {
-                m->dac.pos -= (m->dac.len - m->dac.loop) << 16;
-                i1 = m->dac.pos >> 16;
-            } else {
-                m->dac.on = 0;
-                i1 = i0;
-            }
+    uint32_t i0 = m->dac.pos >> 16, i1;
+    m->dac.pos += m->dac.step;
+    i1 = m->dac.pos >> 16;
+    if (i1 >= m->dac.len) {
+        if (m->dac.loop < m->dac.len) {
+            m->dac.pos -= (m->dac.len - m->dac.loop) << 16;
+            i1 = m->dac.pos >> 16;
+        } else {
+            m->dac.on = 0;
+            i1 = i0;
         }
-        if (i1 != i0 && m->dac.on)
-            md_dac_write(m, &m->dac.data[i1]);
     }
-    m->fm_prev[0] = m->fm_next[0];
-    m->fm_prev[1] = m->fm_next[1];
-    opn2_clock(&m->fm, &l, &r);
-    m->fm_next[0] = l * FM_GAIN;
-    m->fm_next[1] = r * FM_GAIN;
+    if (i1 != i0 && m->dac.on) {
+        const uint8_t *at = &m->dac.data[i1];
+        m->fm.dac = (uint16_t)((m->fm.dac & 1u) | ((uint32_t)(*at ^ 0x80u) << 1));
+        return at;
+    }
+    return 0;
 }
 
-static inline uint16_t absu(int32_t v) { return (uint16_t)(v < 0 ? -v : v); }
+/* a chunk's FM samples, made at once (opn2_render) before the chunk's output samples use them */
+static struct {
+    uint16_t dac[OPN2_BLOCK];
+    const uint8_t *dac_at[OPN2_BLOCK];
+    int32_t l[OPN2_BLOCK], r[OPN2_BLOCK];
+    int16_t out[OPN2_BLOCK][OPN2_NCH];
+} fmb;
 
-void md_render(md_t *m, int32_t *out, uint32_t n)
+DSP_INLINE uint16_t absu(int32_t v) { return (uint16_t)(v < 0 ? -v : v); }
+
+DSP_HOT void md_render(md_t *m, int32_t *out, uint32_t n)
 {
     int32_t psg[CHUNK];
+    uint32_t fresh = 1;                                     /* the FM's levels changed: check its peaks */
+    /* output samples a chunk: CHUNK, unless its FM samples would not fit (output rates under 22 kHz) */
+    uint32_t most = ((OPN2_BLOCK - 1u) << 16) / m->fm_step;
+    if (most > CHUNK)
+        most = CHUNK;
     while (n) {
-        uint32_t k = n < CHUNK ? n : CHUNK, s, c;
+        uint32_t k = n < most ? n : most, s, c, nf = 0, f = 0, pos = m->fm_pos;
+        const int16_t *fo = m->fm.out;                      /* the FM's levels at this output sample */
+        int16_t prev[OPN2_NCH];
         for (s = 0; s < k; s++)
             psg[s] = 0;
         psg_render(&m->psg, psg, k);
+        for (s = 0; s < k; s++) {                           /* the FM samples this chunk needs, and the DAC */
+            pos += m->fm_step;
+            for (; pos >= (1u << 16); pos -= (1u << 16)) {
+                fmb.dac_at[nf] = m->dac.on ? dac_step(m) : 0;
+                fmb.dac[nf++] = m->fm.dac;
+            }
+        }
+        for (c = 0; c < OPN2_NCH; c++)
+            prev[c] = m->fm.out[c];
+        fo = prev;
+        if (nf)
+            opn2_render(&m->fm, nf, fmb.dac, fmb.l, fmb.r, fmb.out);
         for (s = 0; s < k; s++) {
             int32_t x[2];
             uint32_t ch;
+            int32_t ps = psg[s] * 2 / 5;
             m->fm_pos += m->fm_step;
             while (m->fm_pos >= (1u << 16)) {
                 m->fm_pos -= (1u << 16);
-                fm_sample(m);
+                if (fmb.dac_at[f]) {                        /* the DAC's write, logged at its time */
+                    m->dac_at = fmb.dac_at[f];
+                    if (m->log)
+                        m->log(m->log_ctx, MD_LOG_DAC, 0, 0x2A, *fmb.dac_at[f]);
+                }
+                m->fm_prev[0] = m->fm_next[0];
+                m->fm_prev[1] = m->fm_next[1];
+                m->fm_next[0] = fmb.l[f] * FM_GAIN;
+                m->fm_next[1] = fmb.r[f] * FM_GAIN;
+                fo = fmb.out[f++];
+                fresh = 1;
             }
             for (c = 0; c < 2u; c++) {
                 /* 32-bit products only (the FM-1's compiler has no 64-bit helpers): the step is
                  * 17 bits at most, the position 14, the filter's coefficient Q14 */
                 int32_t f = m->fm_prev[c] + (((m->fm_next[c] - m->fm_prev[c]) * (int32_t)(m->fm_pos >> 2)) >> 14);
-                int32_t v = f + psg[s] * 2 / 5, y;
+                int32_t v = f + ps, y;
                 m->lp[c] += ((v - m->lp[c]) * m->lp_a) >> 14;
                 /* DC blocker (the console's output capacitors): y = x - x' + (1 - 1/2048) y', its
                  * state in 1/256ths so that it settles to 0 (the ladder effect's offset goes) */
@@ -168,14 +207,17 @@ void md_render(md_t *m, int32_t *out, uint32_t n)
             if (++m->scope_div >= 2u) {
                 m->scope_div = 0;
                 for (ch = 0; ch < 6u; ch++)
-                    m->scope[ch][m->scope_pos] = (int8_t)(m->fm.out[ch] >> 1);
+                    m->scope[ch][m->scope_pos] = (int8_t)(fo[ch] >> 1);
                 for (ch = 0; ch < 4u; ch++)
                     m->scope[6u + ch][m->scope_pos] = (int8_t)(m->psg.level[ch] >> 7);
                 m->scope_pos = (uint8_t)((m->scope_pos + 1u) % MD_SCOPE);
             }
-            for (ch = 0; ch < 6u; ch++)
-                if (absu(m->fm.out[ch]) * 32u > m->peak[ch])
-                    m->peak[ch] = (uint16_t)(absu(m->fm.out[ch]) * 32u);
+            if (fresh) {                                    /* (the same levels again change no peak) */
+                for (ch = 0; ch < 6u; ch++)
+                    if (absu(fo[ch]) * 32u > m->peak[ch])
+                        m->peak[ch] = (uint16_t)(absu(fo[ch]) * 32u);
+                fresh = 0;
+            }
             for (ch = 0; ch < 4u; ch++)
                 if (absu(m->psg.level[ch]) > m->peak[6u + ch])
                     m->peak[6u + ch] = absu(m->psg.level[ch]);

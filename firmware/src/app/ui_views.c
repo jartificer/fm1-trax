@@ -1074,8 +1074,10 @@ static void su_value(int row, char *b)
         if (OM_REV[0])
             str_cpy(b + str_len(b), " R", 3), str_cpy(b + str_len(b), OM_REV, 8);
         break;
-    case SU_CPU:
+    case SU_CPU:                               /* the average, and the slowest block lately */
         fmt_int(b, (int32_t)plat_cpu_pct());
+        str_cpy(b + str_len(b), "% PEAK ", 8);
+        fmt_int(b + str_len(b), (int32_t)ui.cpu_peak);
         str_cpy(b + str_len(b), "%", 2);
         break;
     default: b[0] = 0; break;

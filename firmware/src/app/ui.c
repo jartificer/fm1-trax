@@ -143,6 +143,8 @@ static struct {
     int16_t jam_key;                           /* the key sounding (a panel key, or 100 + a MIDI note), -1 none,
                                                 * JAM_TIMED a knob's preview, which stops at jam_until */
     uint32_t jam_until;
+    uint16_t cpu_peak;                         /* the slowest audio block lately, % of its time */
+    uint32_t cpu_peak_t;
     uint8_t jam_ch, jam_ins;
     int16_t keys_held[16];                     /* the keys down, oldest first, as jam_key counts them */
     uint8_t keys_held_n;
@@ -758,6 +760,21 @@ void ui_frame(void)
     if (player_guard_trips != trips) {          /* the sound's safety net went off (player_render) */
         trips = player_guard_trips;
         ui_say("SOUND RESET", "SAFETY NET");
+    }
+    {                                           /* the audio's time budget: the slowest block, held 2 s */
+        static uint32_t xruns, said;
+        uint32_t p = plat_cpu_peak_pct(), now = plat_ms();
+        if (p >= ui.cpu_peak || now - ui.cpu_peak_t > 2000u) {
+            ui.cpu_peak = (uint16_t)(p > 999u ? 999u : p);
+            ui.cpu_peak_t = now;
+        }
+        if (plat_xruns() != xruns) {            /* a block came too late: the DMA played an old one */
+            xruns = plat_xruns();
+            if (now - said > 3000u) {
+                said = now;
+                ui_say("AUDIO", "TOO SLOW");
+            }
+        }
     }
     th = &THEMES[set.theme % NTHEMES];
     if (plat_ms() - ui.drawn_at < FRAME_MS)

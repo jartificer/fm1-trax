@@ -53,6 +53,8 @@ static void render_block(int32_t *o)                /* ALNK0: one half, measured
     us = (fm1_ticks() - t0) / FM1_TICKS_PER_US;
     om_dbg.cpu_q8 = (om_dbg.cpu_q8 * 15u + (us * 256u) / budget) / 16u;
     audio_cpu_pct = (om_dbg.cpu_q8 * 100u) >> 8;
+    if (us * 100u / budget > audio_cpu_peak)
+        audio_cpu_peak = us * 100u / budget;
     om_dbg.halves++;
     om_dbg.last_us = us;
     if (us > om_dbg.max_us)

@@ -181,6 +181,7 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
 
 static uint32_t cpu_pct;
 uint32_t plat_cpu_pct(void) { return cpu_pct; }
+uint32_t plat_cpu_peak_pct(void) { return cpu_pct; }
 uint32_t plat_xruns(void) { return 0; }
 
 /* -------------------------------------------------------------- app --- */

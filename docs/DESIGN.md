@@ -88,6 +88,23 @@ mix reaches (`PLAYER_GUARD`, 18 dB over the clip, the loudest fuzzed mix being 2
 the engine's state is broken: the block is dropped, the player stops and the chips start over, and
 the screen says SOUND RESET. `tests/host/fuzz_test.c` fuzzes the whole path (BUILDING.md).
 
+### The time budget
+
+The audio interrupt renders 256 frames every 5.8 ms; a block that comes late is heard as a stuck
+buffer, and the screen gets only the time the sound leaves. The engine is built for it:
+
+- The sound code and its tables run from RAM (`DSP_HOT`, `dsp/dsp_hot.h`, placed in `.ram_text`
+  after the flash driver and copied there at boot), not from flash, whose cache misses cost more
+  than the work. Calls from flash into it go through a pointer (`md_render_far`).
+- The YM2612 is rendered a chunk at a time (`opn2_render`): the per-sample globals (LFO, envelope
+  clock) first, then each channel and operator over the whole chunk, with operators at rest skipped
+  and the attenuation worked out again only when the envelope moves. Register writes, key events
+  and CSM fall back to the sample-by-sample path, which computes the same samples.
+- The PSG works out each output sample's weights from its edges instead of stepping the chip.
+
+SETUP shows AUDIO LOAD, the average and the slowest block of the last 2 s as a share of the 5.8 ms,
+and the screen says AUDIO TOO SLOW when a block comes late.
+
 ### Limits kept on purpose
 
 6 FM voices and 4 PSG voices, no more: each tracker channel *is* one chip channel. One LFO for the

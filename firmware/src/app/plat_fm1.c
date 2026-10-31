@@ -96,6 +96,12 @@ void plat_midi_out(uint32_t pkt) { midi_out_event(pkt); }
 
 #include "plat_store.c"
 
-static volatile uint32_t audio_cpu_pct, audio_xruns;
+static volatile uint32_t audio_cpu_pct, audio_xruns, audio_cpu_peak;
 uint32_t plat_cpu_pct(void) { return audio_cpu_pct; }
+uint32_t plat_cpu_peak_pct(void)                    /* the slowest block since the last call */
+{
+    uint32_t p = audio_cpu_peak;
+    audio_cpu_peak = 0;
+    return p;
+}
 uint32_t plat_xruns(void) { return audio_xruns; }

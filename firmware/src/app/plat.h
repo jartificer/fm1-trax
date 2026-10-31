@@ -65,4 +65,5 @@ uint32_t plat_obj_epoch(void);         /* changes with every plat_obj_open (the 
 
 /* audio load in % of the render budget, and xruns since boot (device: from the ISR) */
 uint32_t plat_cpu_pct(void);
+uint32_t plat_cpu_peak_pct(void);   /* the slowest audio block since the last call, % of its time */
 uint32_t plat_xruns(void);
