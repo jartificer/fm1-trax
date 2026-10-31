@@ -29,7 +29,7 @@ static void audition_end(void)
     if (!audition_on)
         return;
     song.ins[AUDITION_INS] = audition_keep;
-    ins_changed(AUDITION_INS);
+    player_post(PC_INS, AUDITION_INS, 0, 0);   /* the song's own instrument back: not an edit (no "*") */
     audition_on = 0;
 }
 
