@@ -1,0 +1,51 @@
+# the battery: the header's icon at every level, none on USB power, the low warning (not for a short
+# dip, once after 5 s empty, again only after 10 minutes), and the SETUP row
+wait 1700
+tap PLAY
+expect view 0
+battery 3
+wait 300
+shot bars3.png
+battery 2
+wait 300
+shot bars2.png
+battery 1
+wait 300
+shot bars1.png
+battery 0
+wait 2000
+expect battwarn 0
+battery 1
+wait 4000
+expect battwarn 0
+battery 0
+wait 4000
+expect battwarn 0
+wait 1500
+expect battwarn 1
+shot warn.png
+tap PLAY
+wait 3000
+expect playing 1
+shot empty_playing.png
+wait 60000
+expect battwarn 1
+tap PLAY
+expect playing 0
+tap GLO
+tap GLO
+wait 300
+turn SELECT 12
+wait 300
+shot setup_low.png
+battery 4
+wait 300
+shot setup_usb.png
+wait 600000
+expect battwarn 1
+battery 0
+wait 6000
+expect battwarn 2
+battery 3
+wait 300
+shot setup_full.png

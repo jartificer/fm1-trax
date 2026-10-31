@@ -144,6 +144,8 @@ static struct {
                                                 * JAM_TIMED a knob's preview, which stops at jam_until */
     uint32_t jam_until;
     uint16_t cpu_peak;                         /* the slowest audio block lately, % of its time */
+    uint32_t batt_low_t, batt_said;            /* the battery: since when it reads empty; the last warning */
+    uint16_t batt_warns;                       /* low-battery warnings shown */
     uint32_t cpu_peak_t;
     uint8_t jam_ch, jam_ins;
     int16_t keys_held[16];                     /* the keys down, oldest first, as jam_key counts them */
@@ -364,6 +366,25 @@ static void song_pos_text(char *b)             /* "03:1F" */
     hex2(b + 3, (uint32_t)r);
 }
 
+/* the battery, small, between the transport and the position: 0..3 bars; nothing on USB power (or
+ * before the first reading). Empty: a red outline that blinks (ui_frame warns once as well) */
+static void batt_icon(int32_t x, int32_t y)
+{
+    int b = plat_battery(), i;
+    uint16_t c = b == 1 ? th->hi : th->text;
+    if (b < 0 || b > 3)
+        return;
+    if (b == 0) {
+        if (ui.frame / 16u & 1u)
+            return;
+        c = th->rec;
+    }
+    frame_rect(x, y, 14, 8, c);
+    rect(x + 14, y + 2, 2, 4, c);              /* the terminal */
+    for (i = 0; i < b; i++)
+        rect(x + 2 + i * 4, y + 2, 3, 4, c);
+}
+
 static void draw_header(void)
 {
     char b[32];
@@ -397,6 +418,7 @@ static void draw_header(void)
     } else {
         rect(171, 9, 6, 6, ui.edit ? th->rec : th->dim);
     }
+    batt_icon(184, 8);
     rect(0, HDR_H - 1, 240, 1, mixc(th->acc, th->bg, 96));
 }
 
@@ -774,6 +796,19 @@ void ui_frame(void)
                 said = now;
                 ui_say("AUDIO", "TOO SLOW");
             }
+        }
+    }
+    {   /* the battery reads empty for 5 s (not a dip as the audio draws): say so, again every 10 minutes */
+        uint32_t now = plat_ms();
+        if (plat_battery() != 0)
+            ui.batt_low_t = 0;
+        else if (!ui.batt_low_t)
+            ui.batt_low_t = now | 1u;
+        else if (now - ui.batt_low_t >= 5000u && (!ui.batt_warns || now - ui.batt_said >= 600000u)) {
+            ui.batt_said = now;
+            ui.batt_warns++;
+            ui_say("BATTERY LOW", ui.dirty ? "SAVE SONG" : "CHARGE IT");
+            ui.msg_until = now + 4000u;
         }
     }
     th = &THEMES[set.theme % NTHEMES];

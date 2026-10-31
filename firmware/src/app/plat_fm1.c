@@ -2,6 +2,8 @@
 /* FM1-DRIVE platform on the FM-1 (FM1-GM's): plat.h over Felucca's HAL, panel map, USB rings and storage.
  * Part of the unity build (main.c), after the HAL, usb.c, storage.c and panel.c. */
 
+#include "battery.h"
+
 uint32_t plat_ms(void) { return fm1_ms; }
 
 uint32_t plat_buttons(void)
@@ -25,17 +27,26 @@ int32_t plat_enc(int role)
 static volatile uint32_t master_q12 = 2048;
 uint32_t plat_master(void) { return master_q12; }
 
-/* the battery: ADC channel 3 (its divider), smoothed by the main loop; Felucca's thresholds. A USB
- * host powers the FM-1 (there is no charger status line): then a bolt */
-static int32_t batt_raw;
+/* the battery: ADC channel 3 (its divider), sampled by the main loop every 50 ms (never from the
+ * audio ISR), smoothed in 1/16 counts (a plain /32 of whole counts stuck up to 31 counts away, as far
+ * as two thresholds), turned into bars with hysteresis (battery.h). A USB host powers the FM-1
+ * (there is no charger status line): then a plug */
+static int32_t batt_q4;                        /* the reading x16; 0: none yet */
+static int batt_lvl = -1;
+static void batt_sample(int32_t a)
+{
+    if (a <= 0)
+        return;
+    batt_q4 = batt_q4 ? batt_q4 + (a * 16 - batt_q4) / 16 : a * 16;
+    batt_lvl = batt_level(batt_q4 / 16, batt_lvl);
+}
 int plat_battery(void)
 {
     if (usb.config && !usb.suspended)
         return 4;
-    if (!batt_raw)
-        return -1;
-    return batt_raw >= 591 ? 3 : batt_raw >= 561 ? 2 : batt_raw >= 531 ? 1 : 0;
+    return batt_lvl;
 }
+int plat_battery_adc(void) { return batt_q4 ? (int)(batt_q4 / 16) : -1; }
 
 /* LEDs: the picture is built off-line and copied one byte per column (Felucca: clearing
  * and relighting would let the 10 kHz scan catch the dark gap and flicker) */
