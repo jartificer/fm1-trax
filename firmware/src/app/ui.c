@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the screen and the panel (docs/DESIGN.md, 5). Part of the unity build after app.h; the
+/* FM1-TRAX: the screen and the panel (docs/DESIGN.md, 5). Part of the unity build after app.h; the
  * host simulator and the web build include it too.
  *
  * The screen is drawn whole, every frame (~30 a second), in three bands of 80 rows: each band is

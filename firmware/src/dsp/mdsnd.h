@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the Mega Drive's sound: the YM2612 at its own rate, resampled, the PSG, the DAC
+/* FM1-TRAX: the Mega Drive's sound: the YM2612 at its own rate, resampled, the PSG, the DAC
  * stream a sound driver would feed from the Z80, the console's output filter, and scopes.
  *
  * Everything that makes sound goes through md_fm / md_psg (register writes, as a driver makes them)

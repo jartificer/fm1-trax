@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE platform interface (FM1-GM's, from FoMni's and X0X's): everything the app needs from the
+/* FM1-TRAX platform interface (FM1-GM's, from FoMni's and X0X's): everything the app needs from the
  * hardware.
  *
  * The device implementation (plat_fm1.c) wraps Felucca's HAL and panel map; the
@@ -48,7 +48,7 @@ enum { OBJ_SET, OBJ_PANEL, OBJ_NOBJ };
 /* flash: OBJ_SET 0xFC000, OBJ_PANEL 0xDC000, a sector a copy */
 
 /* the chunk store (storage.c): numbered objects of any size, each saved as a new version that
- * replaces the one before only once it is complete. FM1-DRIVE keeps the songs and the instrument
+ * replaces the one before only once it is complete. FM1-TRAX keeps the songs and the instrument
  * library there (app.h: OBJ_SONG, OBJ_LIB). The bytes are the app's. */
 #define PLAT_NOBJ 512
 void plat_obj_scan(void);              /* boot */

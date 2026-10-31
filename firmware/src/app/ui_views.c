@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the views other than the pattern, and what every view shares (navigation, transport,
+/* FM1-TRAX: the views other than the pattern, and what every view shares (navigation, transport,
  * saving, undo, the instrument on PRESETS). Included by ui.c after ui_pat.c. */
 
 #define AUDITION_INS (MAX_INS - 2)             /* the library plays what it shows on this instrument */
@@ -29,7 +29,7 @@ static void audition_end(void)
     if (!audition_on)
         return;
     song.ins[AUDITION_INS] = audition_keep;
-    ins_changed(AUDITION_INS);
+    player_post(PC_INS, AUDITION_INS, 0, 0);   /* the song's own instrument back: not an edit (no "*") */
     audition_on = 0;
 }
 
@@ -1157,7 +1157,7 @@ static void stage_draw(void)
     /* the title, in chrome, bouncing over copper bars */
     if (band_has(24, 40)) {
         uint16_t grad[32];
-        const char *t = song.title[0] ? song.title : "FM1-DRIVE";
+        const char *t = song.title[0] ? song.title : "FM1-TRAX";
         int32_t w = text_w(&FONT_L, t), x0, k;
         copper(24, 40, ui.frame * 2u + 20u);
         for (k = 0; k < 32; k++)               /* sky, horizon, ground: the chrome */
@@ -1275,7 +1275,7 @@ static void intro_draw(void)
     }
     /* the logo drops in and bounces */
     {
-        static const char *const LOGO = "FM1-DRIVE";
+        static const char *const LOGO = "FM1-TRAX";
         uint16_t grad[32], out[32];
         int32_t y = 64, w = text_w(&FONT_L, LOGO), x = 120 - w / 2, k;
         if (t < 900u) {                        /* falling, then a damped bounce */
@@ -1304,7 +1304,7 @@ static void intro_draw(void)
     copper(160, 40, f * 3u);
     {
         static const char *const SCROLL =
-            "      WELCOME TO FM1-DRIVE ... SIX FM CHANNELS, FOUR PSG, ONE DAC ... 128 FM PRESETS, 32 PSG, "
+            "      WELCOME TO FM1-TRAX ... SIX FM CHANNELS, FOUR PSG, ONE DAC ... 128 FM PRESETS, 32 PSG, "
             "48 DRUMS ... 256 SONG SLOTS ... PRESS ANY BUTTON TO START TRACKING ...      ";
         int32_t n = (int32_t)str_len(SCROLL), off = (int32_t)(f * 4u) % (n * 16), x;
         for (x = -(off % 16); x < 240; x += 16) {

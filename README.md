@@ -1,9 +1,9 @@
-# FM1-DRIVE
+# FM1-TRAX
 
 Custom firmware that turns the M-VAVE FM-1 into a **Sega Mega Drive / Genesis music tracker**. It
 emulates the console's two sound chips, the Yamaha YM2612 (six FM channels) and the SN76489 PSG
 (three square waves and noise), and gives you a pattern tracker in the style of Deflemask and
-Furnace, played from the FM-1's own keys and knobs.
+Furnace, played from the FM-1's own keys and knobs. (FM1-TRAX was called FM1-DRIVE until October 2026.)
 
 > **Status: in development, tested on a real FM-1.** Everything runs and is tested in the host
 > simulator (`tests/run_tests.sh`), and the firmware has been tested on a real FM-1. The firmware comes
@@ -33,7 +33,7 @@ Furnace, played from the FM-1's own keys and knobs.
 
 ## No warranty
 
-FM1-DRIVE is provided "as is", without warranty of any kind, express or implied, including the implied
+FM1-TRAX is provided "as is", without warranty of any kind, express or implied, including the implied
 warranties of merchantability and fitness for a particular purpose. Installing custom firmware can
 leave a device unable to start ("bricked") and may void its warranty. You install it at your own risk:
 the author is not responsible for a bricked or damaged device, lost songs or data, or any other harm
@@ -42,12 +42,12 @@ which governs. Know the [recovery steps](#recovery) before you install.
 
 ## Installing
 
-Get `fm1drive.fwsc` (it is kept in `web/`, or build it yourself: see [BUILDING.md](BUILDING.md)). Then,
+Get `fm1trax.fwsc` (it is kept in `web/`, or build it yourself: see [BUILDING.md](BUILDING.md)). Then,
 with the FM-1 connected over USB:
 
 ```
 pip install mido python-rtmidi
-python3 tools/fm1_install.py fm1drive.fwsc
+python3 tools/fm1_install.py fm1trax.fwsc
 ```
 
 python-rtmidi comes ready-built for Python 3.8 to 3.12 on Windows, macOS and Linux. With a newer
@@ -62,7 +62,7 @@ install M-VAVE's stock package the same way, or with M-VAVE's updater.
 Or from the browser: the page in `web/` installs over Web MIDI in Chrome, Edge or Opera on a computer
 (the same update as `fm1_install.py`).
 
-Holding OCT- and OCT+ for 5 seconds puts FM1-DRIVE into update mode, for an installer that cannot
+Holding OCT- and OCT+ for 5 seconds puts FM1-TRAX into update mode, for an installer that cannot
 reach it otherwise.
 
 ### Recovery
@@ -120,7 +120,7 @@ See [BUILDING.md](BUILDING.md).
 
 ## Credits and licence
 
-FM1-DRIVE is GPL-3.0-only (see `LICENSE`). It is built on
+FM1-TRAX is GPL-3.0-only (see `LICENSE`). It is built on
 [FM1-GM](https://github.com/jartificer/fm1-gm)'s platform, which comes from
 [Felucca](https://github.com/hugelton/Felucca), [X0X](https://github.com/charlesvestal/fm1-x0x) and
 [FoMni](https://github.com/charlesvestal/fm1-fomni): the hardware layer, the update loader, the USB

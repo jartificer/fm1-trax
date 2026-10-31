@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: firmware/src/lz4.c, round trips (text-like, tracker-like, random, short, empty) and
+/* FM1-TRAX: firmware/src/lz4.c, round trips (text-like, tracker-like, random, short, empty) and
  * damaged input that must be refused without reading or writing out of bounds. */
 #include <stdint.h>
 #include <stdio.h>

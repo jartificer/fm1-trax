@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The FM1-DRIVE editor: a desktop tracker on the firmware's own engine. web/fm1drive.wasm (host/drive_web.c)
+// The FM1-TRAX editor: a desktop tracker on the firmware's own engine. web/fm1trax.wasm (host/drive_web.c)
 // holds the song as the FM-1 does (song_t); this page reads and writes it in place, through the
 // struct's layout the module reports (web_layout), and plays it with the firmware's player and chips.
 // Files go through the module too: .fm1d songs (song_write / song_read), .fm1i instruments, VGM.
@@ -101,7 +101,7 @@ function autosave() {
             const b = snapshot();
             let s = "";
             for (let i = 0; i < b.length; i += 8192) s += String.fromCharCode(...b.subarray(i, i + 8192));
-            localStorage.setItem("fm1drive-song", btoa(s));
+            localStorage.setItem("fm1drive-song", btoa(s));   // the old name kept, so saved songs survive the rename
         } catch { /* private window, or full: the song stays in the page */ }
     }, 600);
 }
@@ -621,7 +621,7 @@ $("f-ins").addEventListener("change", async e => {
     e.target.value = "";
     if (!f) return;
     const b = new Uint8Array(await f.arrayBuffer());
-    if (String.fromCharCode(...b.subarray(0, 4)) !== "FDI1") return say(`${f.name}: not an FM1-DRIVE instrument`, true);
+    if (String.fromCharCode(...b.subarray(0, 4)) !== "FDI1") return say(`${f.name}: not an FM1-TRAX instrument`, true);
     change();
     if (restoreIns(ui.ins, b.subarray(4))) say(`${f.name}: damaged`, true);
     refreshIns();
@@ -997,7 +997,7 @@ $("f-song").addEventListener("change", async e => {
     change();
     stop();
     const rc = loadBytes(b);
-    afterLoad(rc ? `${f.name}: not an FM1-DRIVE song (a new one instead)` : f.name, !!rc);
+    afterLoad(rc ? `${f.name}: not an FM1-TRAX song (a new one instead)` : f.name, !!rc);
 });
 $("b-import").onclick = () => $("f-vgm").click();
 $("f-vgm").addEventListener("change", async e => {
@@ -1107,12 +1107,12 @@ async function connectWith(fn, label) {
         $("dev-state").textContent = "looking…";
         const r = await fn();
         if (!r || !r.link) {
-            $("dev-state").textContent = r && r.found ? `found ${r.found}, not FM1-DRIVE` : `no ${label} found`;
+            $("dev-state").textContent = r && r.found ? `found ${r.found}, not FM1-TRAX` : `no ${label} found`;
             return;
         }
         link = r.link;
         const i = r.info;
-        $("dev-state").textContent = `${label}: FM1-DRIVE ${i.version}, ${i.free} of ${i.kib} KB free`;
+        $("dev-state").textContent = `${label}: FM1-TRAX ${i.version}, ${i.free} of ${i.kib} KB free`;
         await refreshSlots();
     } catch (e) {
         $("dev-state").textContent = e.message;
@@ -1129,7 +1129,7 @@ async function refreshSlots() {
         h += `<div data-s="${k}" class="${cls}"><span>${k.toString().padStart(3, "0")}</span><span>${s.used ? esc(s.title || "(untitled)") : "empty"}${k === info.slot ? " ◆" : ""}</span><span>${s.used ? (s.bytes / 1024).toFixed(1) + " KB" : ""}</span></div>`;
     }
     $("slots").innerHTML = h;
-    $("dev-state").textContent = `FM1-DRIVE ${info.version}, ${info.free} of ${info.kib} KB free, ◆ in memory${info.dirty ? " (unsaved)" : ""}`;
+    $("dev-state").textContent = `FM1-TRAX ${info.version}, ${info.free} of ${info.kib} KB free, ◆ in memory${info.dirty ? " (unsaved)" : ""}`;
     prog(0);
 }
 function devButtons() {
@@ -1286,7 +1286,7 @@ function frame() {
 }
 
 async function boot() {
-    const {instance} = await WebAssembly.instantiate(await (await fetch("fm1drive.wasm")).arrayBuffer(), {});
+    const {instance} = await WebAssembly.instantiate(await (await fetch("fm1trax.wasm")).arrayBuffer(), {});
     x = instance.exports;
     L = Array.from({length: 31}, (_, k) => x.web_layout(k));
     x.web_ed_init();

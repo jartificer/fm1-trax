@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the instruments in the firmware: 128 FM patches and 32 PSG instruments in groups, and
+/* FM1-TRAX: the instruments in the firmware: 128 FM patches and 32 PSG instruments in groups, and
  * the DAC kit's samples (made by tools/gen_drums.py). */
 #pragma once
 #include <stdint.h>

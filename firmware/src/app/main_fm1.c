@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Boot, audio ISR and main loop adapted from Felucca's main.c / audio.c, Copyright (C) 2026
  * Leo Kuroshita (@kurogedelic), Hugelton Instruments. */
-/* FM1-DRIVE on the FM-1 (FM1-GM's, from FoMni's and X0X's): boot (WDT first, boot-loop guard, guards),
+/* FM1-TRAX on the FM-1 (FM1-GM's, from FoMni's and X0X's): boot (WDT first, boot-loop guard, guards),
  * LCD, input (TIMER5 10 kHz), audio (ALNK0), USB; then the main loop: the UI (it draws at ~30 frames/s),
  * input polled in between. */
 extern uint32_t _data_start[], _data_end[], _data_load[], _bss_start[], _bss_end[];
@@ -156,7 +156,7 @@ static void fm1_fault(const fm1_crash_t *c)
     uint32_t t0;
     fm1_audio_stop();
     lcd_fill(0, 0, 240, 240, RGB(160, 0, 0));
-    draw_text_box(0, 8, 240, &FONT_S, "FM1-DRIVE CRASH", C_WHITE, 1);
+    draw_text_box(0, 8, 240, &FONT_S, "FM1-TRAX CRASH", C_WHITE, 1);
     hexs(b, c->vec);
     draw_text_box(10, 40, 220, &FONT_S, b, C_WHITE, 0);
     hexs(b, c->pc);
@@ -185,15 +185,15 @@ static void enter_uboot(const char *why)
     fm1_enter_uboot();
 }
 
-/* SAFE MODE: FM1-DRIVE crashed (or hung) twice while starting. Nothing that makes sound runs: no audio,
- * no engine, no UI; USB is on, so an installer (FM1-DRIVE's, or the stock firmware's M-UPGRADE) can
+/* SAFE MODE: FM1-TRAX crashed (or hung) twice while starting. Nothing that makes sound runs: no audio,
+ * no engine, no UI; USB is on, so an installer (FM1-TRAX's, or the stock firmware's M-UPGRADE) can
  * reach it. PLAY tries again. The chip's own update mode stays the last resort (fm1_cstart). */
 static void safe_main(void)
 {
     char b[24];
     uint32_t t0, play;
     lcd_fill(0, 0, 240, 240, C_BLACK);
-    draw_text_box(0, 18, 240, &FONT_B, "FM1-DRIVE SAFE MODE", C_HI, 1);
+    draw_text_box(0, 18, 240, &FONT_B, "FM1-TRAX SAFE MODE", C_HI, 1);
     draw_text_box(0, 52, 240, &FONT_S, "IT CRASHED TWICE", C_WHITE, 1);
     draw_text_box(0, 72, 240, &FONT_S, "WHILE STARTING.", C_WHITE, 1);
     draw_text_box(0, 102, 240, &FONT_S, "NO SOUND. USB IS ON:", C_WHITE, 1);
@@ -223,7 +223,7 @@ static void safe_main(void)
         if ((fm1_in.buttons & play) && fm1_ms - t0 > 500u) {
             bootguard.failed = 0;                   /* try again, from scratch */
             bootguard.pending = 0;
-            draw_text_box(0, 172, 240, &FONT_S, "STARTING FM1-DRIVE...", C_HI, 1);
+            draw_text_box(0, 172, 240, &FONT_S, "STARTING FM1-TRAX...", C_HI, 1);
             usb_detach();
             fm1_delay_ms(30);
             fm1_reboot();
@@ -244,8 +244,8 @@ static void splash(void)
     lcd_fill(0, 0, 240, 240, K_BG);
     cv_begin(240, 80, K_BG);
     {
-        int32_t w = text_w(&FONT_L, "FM1-DRIVE");
-        cv_text((240 - w) / 2, 0, &FONT_L, "FM1-DRIVE", K_ACC);
+        int32_t w = text_w(&FONT_L, "FM1-TRAX");
+        cv_text((240 - w) / 2, 0, &FONT_L, "FM1-TRAX", K_ACC);
         w = text_w(&FONT_S, "Mega Drive tracker");
         cv_text((240 - w) / 2, 42, &FONT_S, "Mega Drive tracker", K_DIM);
         if (OM_REV[0]) {

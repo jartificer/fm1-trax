@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE on the host: the whole app (UI, settings, tracker, the Mega Drive's chips) against a
+/* FM1-TRAX on the host: the whole app (UI, settings, tracker, the Mega Drive's chips) against a
  * simulated FM-1 driven by a script. Audio goes to a WAV, the screen to PNGs, the lights to text. The
  * device-only parts (HAL, USB, OTA, flash driver) are replaced by plat.h implemented here. (FM1-GM's
  * gm_host, from FoMni's and X0X's.)

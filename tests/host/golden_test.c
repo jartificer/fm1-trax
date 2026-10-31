@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the engine's output fingerprints. Random register logs for each chip (both YM2612 ports,
+/* FM1-TRAX: the engine's output fingerprints. Random register logs for each chip (both YM2612 ports,
  * every register including CSM, channel 3's special mode, the timers, SSG-EG, the LFO, the DAC; the
  * PSG's tones and noise), the whole mixer (md_render, with samples on the DAC), and random songs
  * through the player, each hashed sample by sample. An optimisation of the engine must leave every

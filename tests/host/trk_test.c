@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the tracker's tests: the song store, the stream, the driver and its effects, the
+/* FM1-TRAX: the tracker's tests: the song store, the stream, the driver and its effects, the
  * presets, the VGM export. With WAVDIR: the demo song (WAV and VGM) and every preset as WAVs.
  *
  *   trk_test [WAVDIR] */

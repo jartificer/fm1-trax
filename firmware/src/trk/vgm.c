@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: VGM export (vgm.h). */
+/* FM1-TRAX: VGM export (vgm.h). */
 #include "vgm.h"
 #include "player.h"
 
@@ -208,8 +208,8 @@ uint32_t vgm_export(uint8_t *buf, uint32_t cap, uint32_t max_s)
     gd3_str(song.author);
     gd3_str("");
     gd3_str("");
-    gd3_str("FM1-DRIVE");
-    gd3_str("Made on an FM-1 with FM1-DRIVE");
+    gd3_str("FM1-TRAX");
+    gd3_str("Made on an FM-1 with FM1-TRAX");
     if (v.over)
         return 0;
     put32_at(gd3_len_at, v.len - gd3_len_at - 4u);

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Make FM1-DRIVE's DAC kit: 48 drum and hit samples, synthesised here (no recordings), as 8-bit
+"""Make FM1-TRAX's DAC kit: 48 drum and hit samples, synthesised here (no recordings), as 8-bit
 unsigned PCM at the rates Mega Drive drivers play at, written as a C header.
 
   tools/gen_drums.py OUT.h

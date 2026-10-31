@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the Mega Drive's sound (mdsnd.h). */
+/* FM1-TRAX: the Mega Drive's sound (mdsnd.h). */
 #include "mdsnd.h"
 #include "dsp_hot.h"
 

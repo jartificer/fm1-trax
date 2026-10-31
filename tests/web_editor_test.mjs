@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The web pages' engine and link, without a browser: web/fm1drive.wasm as the editor uses it (the
+// The web pages' engine and link, without a browser: web/fm1trax.wasm as the editor uses it (the
 // song edited in place through web_layout, played, exported as VGM), and web/fm1link.js (the editor's
 // side of the SysEx link) against a second instance of the module running as the FM-1, as the
 // emulator does. Run from the repo root:  node tests/web_editor_test.mjs  (after host/build_web.sh)
@@ -12,7 +12,7 @@ const ok = (cond, what) => {
     console.log(`${what.padEnd(64)} ${cond ? "ok" : "FAIL"}`);
     failed += !cond;
 };
-const wasm = readFileSync("web/fm1drive.wasm");
+const wasm = readFileSync("web/fm1trax.wasm");
 const load = async () => (await WebAssembly.instantiate(wasm, {})).instance.exports;
 const bytes = (x, p, n) => new Uint8Array(x.memory.buffer, p, n);
 const eq = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);

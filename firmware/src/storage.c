@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * X0X / OMNI: object map changed. FM1-GM: the songs in a store of their own. FM1-DRIVE: that store
+ * X0X / OMNI: object map changed. FM1-GM: the songs in a store of their own. FM1-TRAX: that store
  * is a chunk store, for the songs and the instrument library. */
 /* Persistent storage on the SPI NOR.
  *
@@ -18,7 +18,7 @@
 #define ST_PAYLOAD_OFF 256u
 #define ST_PAYLOAD_MAX (ST_SECTOR - ST_PAYLOAD_OFF)
 
-/* flash map, FM1-GM's and FM1-DRIVE's (plat.h OBJ_*): the settings at 0xFC000 (Felucca's FL_GLOB), the panel calibration
+/* flash map, FM1-GM's and FM1-TRAX's (plat.h OBJ_*): the settings at 0xFC000 (Felucca's FL_GLOB), the panel calibration
  * at 0xDC000 (as OMNI), each one sector a copy. Every other sector of Felucca's data area
  * (0x97000..0xDFFFF) belongs to the chunk store, below. Nothing above 0xDFFFF but the
  * settings: 0xE0000.. is the update loader's staging area, 0xEA000.. the stock firmware's user
@@ -154,7 +154,7 @@ static int st_save(uint32_t obj, const void *src, uint32_t len)
 }
 
 /* ------------------------------------------------------------- the chunk store --- *
- * FM1-DRIVE. Every sector of the data area that is not the panel's (0x97000..0xDBFFF and
+ * FM1-TRAX. Every sector of the data area that is not the panel's (0x97000..0xDBFFF and
  * 0xDE000..0xDFFFF, CS_NSEC sectors) is cut into 256-byte chunks, one flash page each. The store
  * keeps numbered objects (plat.h: the songs, the library's instruments), each saved as a new
  * version: its bytes in as many chunks as they take, each chunk programmed whole (header, payload

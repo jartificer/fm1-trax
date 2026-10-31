@@ -7,6 +7,7 @@ expect view 8
 tap PLAY
 expect view 0
 wait 400
+expect dirty 0
 shot pattern_empty.png
 tap REC
 expect edit 1

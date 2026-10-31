@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
-# FM1-DRIVE host tests: the chips (the YM2612 compared with Nuked-OPN2, LGPL-2.1, fetched into
+# FM1-TRAX host tests: the chips (the YM2612 compared with Nuked-OPN2, LGPL-2.1, fetched into
 # build/ref at a fixed commit, used by the tests only, never built into the firmware; without it,
 # offline or NO_NUKED=1, the comparison is skipped), the tracker, the flash store, the installer, and
 # the whole firmware app in the simulator (tests/scenarios/*.fd), with screenshots and audio in
@@ -65,17 +65,17 @@ run storage sh -c "$CC -O2 -Wall -Werror -o $B/storage_test tests/storage_test.c
 run lz4 sh -c "$CC -O2 -Wall -Werror -o $B/lz4_test tests/host/lz4_test.c && $B/lz4_test"
 run battery sh -c "$CC -O2 -Wall -Wextra -Werror -o $B/battery_test tests/host/battery_test.c && $B/battery_test"
 # the update path, against the firmware package (Felucca's tests; needs ./build.sh)
-if [ -f build/fm1drive.fwsc ]; then
-    run ota-entry sh -c "$CC -o $B/ota_test tests/ota_test.c && $B/ota_test build/fm1drive.fwsc"
+if [ -f build/fm1trax.fwsc ]; then
+    run ota-entry sh -c "$CC -o $B/ota_test tests/ota_test.c && $B/ota_test build/fm1trax.fwsc"
     if [ -z "${AC79_SDK:-}" ]; then
         echo "  skip update-loader (needs AC79_SDK, as the build)"
     else
-        run update-loader sh -c "head -c 100000 build/fm1drive.bin > $B/old_app.bin && \
+        run update-loader sh -c "head -c 100000 build/fm1trax.bin > $B/old_app.bin && \
             python3 tools/fm1pkg_make.py $B/old_app.bin build/loader/ota.bin $B/old.fwsc >/dev/null && \
-            $CC -o $B/ldr_test tests/ldr_test.c && $B/ldr_test $B/old.fwsc build/fm1drive.fwsc"
+            $CC -o $B/ldr_test tests/ldr_test.c && $B/ldr_test $B/old.fwsc build/fm1trax.fwsc"
     fi
 else
-    echo "  skip update-path tests (no build/fm1drive.fwsc: run ./build.sh)"
+    echo "  skip update-path tests (no build/fm1trax.fwsc: run ./build.sh)"
 fi
 run installer python3 tests/install_test.py
 run host-build sh host/build_host.sh
@@ -104,11 +104,11 @@ if command -v node >/dev/null 2>&1; then
     if echo 'int f(void){return 0;}' | ${WASM_CC:-clang} --target=wasm32 -nostdlib -Wl,--no-entry -x c -o $B/wasm_probe.wasm - >/dev/null 2>&1; then
         run web-build sh host/build_web.sh
     else
-        echo "  note no clang for wasm32: web/fm1drive.wasm as committed"
+        echo "  note no clang for wasm32: web/fm1trax.wasm as committed"
     fi
     run web-install node tests/web_install_test.mjs
-    [ -f web/fm1drive.wasm ] && run web-editor node tests/web_editor_test.mjs
-    [ -f web/fm1drive.wasm ] && run web-fuzz node tests/web_fuzz_test.mjs ${WEB_FUZZ_SEEDS:-60}
+    [ -f web/fm1trax.wasm ] && run web-editor node tests/web_editor_test.mjs
+    [ -f web/fm1trax.wasm ] && run web-fuzz node tests/web_fuzz_test.mjs ${WEB_FUZZ_SEEDS:-60}
     # the whole app, random sessions on the panel and over MIDI: no hanging notes
     run ui-fuzz node tests/ui_fuzz_test.mjs ${UI_FUZZ_SEEDS:-150}
 else

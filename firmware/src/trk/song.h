@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: a song, as the tracker edits and plays it (docs/DESIGN.md, 3).
+/* FM1-TRAX: a song, as the tracker edits and plays it (docs/DESIGN.md, 3).
  *
  *   Channels: FM1-FM6, SQ1-SQ3, NOI, and with FM3 extended, FM3's operators 2-4 as channels of their
  *   own (CH_OP2..CH_OP4; FM3 is then its operator 1). An order list of up to 256 positions, each

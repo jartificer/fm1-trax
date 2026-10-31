@@ -1,4 +1,4 @@
-# Building FM1-DRIVE
+# Building FM1-TRAX
 
 ## Host tests and the simulator
 
@@ -42,8 +42,8 @@ Needs Linux x86-64 (or Docker on macOS: set `JIELI_DOCKER=1`).
    ```
 3. Build:
    ```
-   ./build.sh                    # build/fm1drive.fwsc, identity FM-1_700
-   ./build.sh --release 0.1      # build/fm1drive-0.1.fwsc, identity FM-1_7000100
+   ./build.sh                    # build/fm1trax.fwsc, identity FM-1_700
+   ./build.sh --release 0.1      # build/fm1trax-0.1.fwsc, identity FM-1_7000100
    ```
 
 Every package carries a revision number, shown on the boot screen: the number of commits in
@@ -65,9 +65,9 @@ installer), `emu.js` (runs the emulator), `worklet.js` (the audio out), `fm1ota.
 and library over SysEx, to an FM-1 or to the emulator in another tab). Two built files are kept in the
 repository, so the site needs no build step to serve:
 
-- `web/fm1drive.wasm`: `sh host/build_web.sh`. Needs clang and wasm-ld (LLVM 13 or later,
+- `web/fm1trax.wasm`: `sh host/build_web.sh`. Needs clang and wasm-ld (LLVM 13 or later,
   `--target=wasm32`); no Emscripten and no libc. The emulator and the editor both run it.
-- `web/fm1drive.fwsc`: the device package, copied from `build/fm1drive.fwsc` after `./build.sh`. Update
+- `web/fm1trax.fwsc`: the device package, copied from `build/fm1trax.fwsc` after `./build.sh`. Update
   `web/build.txt` with the commit it was built from.
 
 `tests/host/fuzz_test.c` fuzzes the sound path for loud-noise bugs: random songs with every effect and

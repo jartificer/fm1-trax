@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE in the browser: the whole app (UI, settings, tracker, the Mega Drive's chips, the song
+/* FM1-TRAX in the browser: the whole app (UI, settings, tracker, the Mega Drive's chips, the song
  * store, the link) as WebAssembly, against a simulated FM-1 that web/emu.js drives; and the same
  * module as the web editor's engine (web/editor.js), which edits the song in place and plays it. The
  * same sources as the firmware and host/drive_host.c, built freestanding (no libc) by
- * host/build_web.sh into web/fm1drive.wasm. (FM1-GM's gm_web.c, reworked.)
+ * host/build_web.sh into web/fm1trax.wasm. (FM1-GM's gm_web.c, reworked.)
  *
  * Emulator: the page sets the panel's state (buttons, keys, encoders, MASTER), queues MIDI in, and
  * calls web_run(ms) to run the device; it reads the screen (web_fb, RGB565 as the panel takes it),

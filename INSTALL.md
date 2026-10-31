@@ -1,17 +1,17 @@
-# Installing FM1-DRIVE on an M-VAVE FM-1
+# Installing FM1-TRAX on an M-VAVE FM-1
 
 The install bundle (made by `tools/make_bundle.sh`) holds these files. From the repository instead,
-the installers are in `tools/` and the package is `web/fm1drive.fwsc`:
-`python3 tools/fm1_install.py web/fm1drive.fwsc`.
+the installers are in `tools/` and the package is `web/fm1trax.fwsc`:
+`python3 tools/fm1_install.py web/fm1trax.fwsc`.
 
 The bundle holds:
 
-- `fm1drive.fwsc`: the firmware package
+- `fm1trax.fwsc`: the firmware package
 - `fm1_install.py`: the installer, which sends the package to the FM-1 over USB MIDI
 - `fm1_rescue.py`: the last-resort recovery tool (macOS only; see "If something goes wrong")
-- `LICENSE`: the GNU GPL-3.0, which FM1-DRIVE is under
+- `LICENSE`: the GNU GPL-3.0, which FM1-TRAX is under
 
-**No warranty.** FM1-DRIVE comes "as is", without warranty of any kind. Installing custom firmware can
+**No warranty.** FM1-TRAX comes "as is", without warranty of any kind. Installing custom firmware can
 leave a device unable to start and may void its warranty; you install it at your own risk. Read "If
 something goes wrong" below before you start.
 
@@ -35,7 +35,7 @@ something goes wrong" below before you start.
    ```
 4. Connect the FM-1, switch it on, and run:
    ```
-   py -3.12 fm1_install.py fm1drive.fwsc
+   py -3.12 fm1_install.py fm1trax.fwsc
    ```
 
 ## macOS
@@ -49,7 +49,7 @@ something goes wrong" below before you start.
    ```
 4. Connect the FM-1, switch it on, and run:
    ```
-   ~/fm1-venv/bin/python fm1_install.py fm1drive.fwsc
+   ~/fm1-venv/bin/python fm1_install.py fm1trax.fwsc
    ```
 
 ## Linux
@@ -61,7 +61,7 @@ something goes wrong" below before you start.
    ```
    python3 -m venv ~/fm1-venv
    ~/fm1-venv/bin/pip install mido python-rtmidi
-   ~/fm1-venv/bin/python fm1_install.py fm1drive.fwsc
+   ~/fm1-venv/bin/python fm1_install.py fm1trax.fwsc
    ```
    If it cannot open the MIDI system, your user may need to be in the `audio` group.
 
@@ -72,7 +72,7 @@ The installer finds the FM-1, shows the package and the firmware it is running, 
 
 1. sends the first part of the package; the FM-1 restarts into its update loader;
 2. writes the whole package (about a minute, with a progress bar);
-3. waits for the FM-1 to restart and checks that FM1-DRIVE is running.
+3. waits for the FM-1 to restart and checks that FM1-TRAX is running.
 
 **Do not unplug the FM-1 or switch it off while it writes.** If the install is cut off anyway, run the
 same command again: it finds the FM-1 in update mode and finishes the write.
@@ -82,17 +82,17 @@ If several MIDI devices are connected and it picks the wrong one: `--port NAME` 
 
 ## In the browser instead
 
-The FM1-DRIVE web page has the same installer, over Web MIDI, in Chrome, Edge or Opera on a computer
+The FM1-TRAX web page has the same installer, over Web MIDI, in Chrome, Edge or Opera on a computer
 (not Safari or Firefox). It asks for permission to use MIDI devices with SysEx: allow it.
 
 ## If something goes wrong
 
 - **The installer does not find the FM-1**: check the cable (a data cable), close other MIDI apps, and
   try another USB port. On the FM-1, holding **OCT-** and **OCT+** together for 5 seconds puts
-  FM1-DRIVE into update mode, for an installer that cannot reach it otherwise.
-- **The FM-1 does not start properly**: after two failed starts in a row FM1-DRIVE comes up in a
+  FM1-TRAX into update mode, for an installer that cannot reach it otherwise.
+- **The FM-1 does not start properly**: after two failed starts in a row FM1-TRAX comes up in a
   **safe mode** (no sound, USB on), so the installer can reach it: install again, or install M-VAVE's
-  stock firmware. PLAY tries FM1-DRIVE again.
+  stock firmware. PLAY tries FM1-TRAX again.
 - **Last resort**: after four failed starts the FM-1 enters the chip's own update mode.
   `fm1_rescue.py` writes the stock firmware back through it, from a Mac; its first lines explain how
   (it needs M-VAVE's FM-1 V15 package, `FM-1.fwsc`, from m-vave.com/download).

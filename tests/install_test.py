@@ -5,7 +5,7 @@
 The fake device (FoMni's, from its web installer's tests): identity on the handshake,
 then "device asks, host answers" reads of the logical image. Run from the repo root:
   python3 tests/install_test.py
-Also reads the built package, build/fm1drive.fwsc, when there is one."""
+Also reads the built package, build/fm1trax.fwsc, when there is one."""
 import io
 import queue
 import shutil
@@ -313,9 +313,9 @@ def from_open():
 
 
 def built_package():
-    clean = ROOT / "build/fm1drive.fwsc"
+    clean = ROOT / "build/fm1trax.fwsc"
     if not clean.exists():
-        print("built package: skipped (no build/fm1drive.fwsc)")
+        print("built package: skipped (no build/fm1trax.fwsc)")
         return
     raw = clean.read_bytes()
     ok(I.product_of(raw).startswith("FM-1_7"), f"{clean.name} identity {I.product_of(raw)} (FM-1_7...)")

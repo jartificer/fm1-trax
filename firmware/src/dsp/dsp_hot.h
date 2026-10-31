@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: where the sound's inner loops live on the FM-1. Code run from the XIP flash stalls on
+/* FM1-TRAX: where the sound's inner loops live on the FM-1. Code run from the XIP flash stalls on
  * every cache miss; these functions and their tables are copied to RAM at boot with the flash
  * driver's (.ram_text, app.ld), and the audio interrupt runs them from there. Elsewhere (the host,
  * the web) the attributes are empty. */

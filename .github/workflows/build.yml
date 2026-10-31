@@ -44,9 +44,9 @@ jobs:
         run: tests/run_tests.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: fm1drive-${{ github.sha }}
+          name: fm1trax-${{ github.sha }}
           path: |
-            build/fm1drive.fwsc
-            build/fm1drive.bin
+            build/fm1trax.fwsc
+            build/fm1trax.bin
             build/scenarios
             build/wav

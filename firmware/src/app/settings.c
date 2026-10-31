@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE settings, song slots and the instrument library. Part of the unity build, after app.h
+/* FM1-TRAX settings, song slots and the instrument library. Part of the unity build, after app.h
  * and lz4.c; the host simulator includes it too.
  *
  * A song in flash: "FDS1", its title (24 bytes, for the song list), then its byte stream

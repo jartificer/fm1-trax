@@ -181,7 +181,7 @@ async function boot() {
 // the song editor (editor.html) in another tab reaches the emulator's USB port over this channel
 function bridge() {
     if (!("BroadcastChannel" in window)) return;
-    const bc = new BroadcastChannel("fm1drive-link");
+    const bc = new BroadcastChannel("fm1trax-link");
     bc.onmessage = e => {
         if (e.data && e.data.from === "editor" && e.data.sx instanceof Uint8Array) emu.sysex(e.data.sx);
     };
@@ -303,23 +303,23 @@ async function usePackage(bytes, name, count = null) {
     ready();
 }
 
-// The package is the newest GitHub release's fm1drive.fwsc, so that the release's download count counts
+// The package is the newest GitHub release's fm1trax.fwsc, so that the release's download count counts
 // installs. GitHub's release downloads send no CORS headers, so the page cannot read them: it reads the
 // same file from the release's tag on raw.githubusercontent.com (which does), checks it against the
 // asset's SHA-256, and after an install fetches the asset once, unread (no-cors), which GitHub counts.
 // Without GitHub (offline, or its 60 an hour API limit) it uses the copy bundled with the page.
-const REPO = "jartificer/fm1-drive", ASSET = "fm1drive.fwsc";
+const REPO = "jartificer/fm1-drive", ASSET = "fm1trax.fwsc", OLD_ASSET = "fm1drive.fwsc";   // releases from before the rename
 async function latestRelease() {
     const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
     if (!r.ok) throw new Error(`GitHub ${r.status}`);
     const rel = await r.json();
-    const asset = rel.assets.find(a => a.name === ASSET);
+    const asset = rel.assets.find(a => a.name === ASSET) || rel.assets.find(a => a.name === OLD_ASSET);
     if (!asset) throw new Error(`no ${ASSET} in ${rel.tag_name}`);
-    const f = await fetch(`https://raw.githubusercontent.com/${REPO}/${encodeURIComponent(rel.tag_name)}/web/${ASSET}`);
+    const f = await fetch(`https://raw.githubusercontent.com/${REPO}/${encodeURIComponent(rel.tag_name)}/web/${asset.name}`);
     if (!f.ok) throw new Error(`${rel.tag_name}: ${f.status}`);
     const bytes = new Uint8Array(await f.arrayBuffer());
     const sha = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), b => b.toString(16).padStart(2, "0")).join("");
-    if (asset.digest && asset.digest !== `sha256:${sha}`) throw new Error(`${rel.tag_name}: web/${ASSET} is not the release's`);
+    if (asset.digest && asset.digest !== `sha256:${sha}`) throw new Error(`${rel.tag_name}: web/${asset.name} is not the release's`);
     return {bytes, name: `release ${rel.tag_name}`, count: asset.browser_download_url};
 }
 latestRelease()

@@ -2,7 +2,7 @@
 // web/fm1ota.js (the web page's installer) against a simulated FM-1, as tests/install_test.py tests
 // tools/fm1_install.py: identity on the handshake, then "device asks, host answers" reads of the
 // logical image. No browser, no hardware. Run from the repo root:  node tests/web_install_test.mjs
-// Also reads the page's package, web/fm1drive.fwsc, when there is one.
+// Also reads the page's package, web/fm1trax.fwsc, when there is one.
 import {readFileSync, existsSync} from "node:fs";
 import {createHash} from "node:crypto";
 import * as I from "../web/fm1ota.js";
@@ -205,12 +205,12 @@ async function attempt(dev, pkg) {
     ok(r.code === "open" && dev.arms.length === 0 && dev.upgrades === 0, "Open -> one of ours: refused, nothing sent (stock first)");
 }
 
-if (existsSync("web/fm1drive.fwsc")) {
-    const pkg = await I.loadPackage(readFileSync("web/fm1drive.fwsc"));
-    ok(pkg.product.startsWith("FM-1_7") && pkg.loader, `web/fm1drive.fwsc: ${pkg.product}, with the Felucca loader`);
+if (existsSync("web/fm1trax.fwsc")) {
+    const pkg = await I.loadPackage(readFileSync("web/fm1trax.fwsc"));
+    ok(pkg.product.startsWith("FM-1_7") && pkg.loader, `web/fm1trax.fwsc: ${pkg.product}, with the Felucca loader`);
     const dev = new FakeFM1(pkg.image, {afterWrite: pkg.product}), r = await attempt(dev, pkg);
-    ok(r.code === 0 && dev.bad === 0, "web/fm1drive.fwsc: installs on the simulated FM-1");
-} else console.log("web/fm1drive.fwsc: skipped (not there)");
+    ok(r.code === 0 && dev.bad === 0, "web/fm1trax.fwsc: installs on the simulated FM-1");
+} else console.log("web/fm1trax.fwsc: skipped (not there)");
 
 console.log(failed ? `WEB INSTALL TESTS FAILED (${failed})` : "web install tests passed");
 process.exit(failed ? 1 : 0);

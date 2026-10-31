@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the SN76489 as in the Mega Drive's VDP (Sega's variant).
+/* FM1-TRAX: the SN76489 as in the Mega Drive's VDP (Sega's variant).
  *
  * Three square tone channels and a noise channel at 3.579545 MHz / 16. 10-bit periods (0 and 1 hold
  * the output high, which drivers use to play samples through the volume), 4-bit attenuation in 2 dB

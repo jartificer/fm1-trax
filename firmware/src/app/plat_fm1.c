@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE platform on the FM-1 (FM1-GM's): plat.h over Felucca's HAL, panel map, USB rings and storage.
+/* FM1-TRAX platform on the FM-1 (FM1-GM's): plat.h over Felucca's HAL, panel map, USB rings and storage.
  * Part of the unity build (main.c), after the HAL, usb.c, storage.c and panel.c. */
 
 #include "battery.h"
