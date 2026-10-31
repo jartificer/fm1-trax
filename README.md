@@ -23,7 +23,7 @@ Furnace, played from the FM-1's own keys and knobs.
   them into a song and tweak it, or build your own. **256 user FM and 128 user PSG slots** in the
   library.
 - **Lots of songs.** **256 song slots** sharing about 258 KB of flash. Songs are compressed, so the
-  demo song takes about 1.2 KB. Saves are power-safe: a song is replaced only once its new copy is
+  demo song, a 2-minute piece, takes about 4.6 KB. Saves are power-safe: a song is replaced only once its new copy is
   complete, and the flash wear is spread evenly.
 - **Fun to look at.** A boot intro with a star field, a chrome logo and a sine scroller; CRT
   scanlines, copper bars and screen wipes; a stage view with scopes, a piano roll and a heat map of
@@ -40,9 +40,13 @@ The `web/` folder is a website (published from the `gh-pages` branch once the re
 - **Installer**: installs the firmware on an FM-1 over USB MIDI (Chrome, Edge or Opera).
 - **Editor**: a desktop tracker on the same engine, with Furnace-style keys: patterns, orders,
   instruments (FM operators with envelope graphs, macros drawn with the mouse, DAC samples), presets,
-  undo, copy and paste, transpose. It opens and saves `.fm1d` songs and `.fm1i` instruments, exports
-  **VGM** and **WAV**, and reads and writes the songs and the library of an FM-1 over USB (or of the
+  undo, copy and paste, transpose. It opens and saves `.fm1d` songs and `.fm1i` instruments,
+  **imports Mega Drive VGMs** (`.vgm` / `.vgz`, as logged by Deflemask, Furnace or an emulator) as
+  songs to edit, exports **VGM** and **WAV**, and reads and writes the songs and the library of an FM-1 over USB (or of the
   emulator in another tab).
+
+The demo song is "Sunset Beach Galaxy" by Tobikomi, from the YM2017 cart (GPL-3.0), imported from
+its VGM (see `assets/songs/README.md`).
 
 ## Controls
 

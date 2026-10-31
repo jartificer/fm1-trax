@@ -342,7 +342,7 @@ static void note_on(int ch, uint8_t note)
     chan_t *c = &player.ch[ch];
     const ins_t *in = &song.ins[c->ins];
     c->note = note;
-    c->pitch = (int32_t)(note - 1u) * 64;
+    c->pitch = c->target = (int32_t)(note - 1u) * 64;   /* no tone portamento back to an old target */
     c->nslide_n = 0;
     c->vib_pos = 0;
     c->arp_pos = 0;
@@ -528,8 +528,8 @@ static void chan_tick(int ch)
     if (c->retrig && t && t % c->retrig == 0 && c->note)
         note_on(ch, c->note);
 
-    /* pitch slides */
-    if (c->slide && t)
+    /* pitch slides: every tick, the row's first too (as Deflemask) */
+    if (c->slide)
         c->pitch += c->slide;
     if (c->porta && c->target != c->pitch && c->note) {
         if (c->pitch < c->target) {

@@ -2,7 +2,7 @@
 wait 300
 tap HOME
 expect view 0
-expect nord 4
+expect nord 35
 wav demo.wav
 peakreset
 tap PLAY
