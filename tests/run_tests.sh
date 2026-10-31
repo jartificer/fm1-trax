@@ -48,6 +48,9 @@ CFLAGS="-O2 -Wall -Wextra -Wdouble-promotion -ffp-contract=off"
 run engine sh -c "$CC $CFLAGS -o $B/engine_test tests/host/engine_test.c $DSP $REF -lm && $B/engine_test ${1:-}"
 # shellcheck disable=SC2086
 run tracker sh -c "$CC $CFLAGS -Ibuild/gen -o $B/trk_test tests/host/trk_test.c $TRK $DSP -lm && $B/trk_test ${1:-}"
+# fuzzing the sound path for loud noise: random songs, live commands, damaged streams, and the safety net
+# shellcheck disable=SC2086
+run fuzz sh -c "$CC $CFLAGS -DOM_HOST -Ibuild/gen -o $B/fuzz_test tests/host/fuzz_test.c $TRK $DSP -lm && $B/fuzz_test ${FUZZ_SEEDS:-300}"
 run storage sh -c "$CC -O2 -Wall -Werror -o $B/storage_test tests/storage_test.c && $B/storage_test"
 run lz4 sh -c "$CC -O2 -Wall -Werror -o $B/lz4_test tests/host/lz4_test.c && $B/lz4_test"
 # the update path, against the firmware package (Felucca's tests; needs ./build.sh)
@@ -74,6 +77,9 @@ done
 if echo 'int main(void){return 0;}' | $CC -fsanitize=address,undefined -x c -o $B/asan_probe - >/dev/null 2>&1; then
     run host-build-asan sh -c "HOST_CFLAGS='-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-sanitize=shift' \
         sh host/build_host.sh && mv build/host/drive_host $B/drive_host_asan && sh host/build_host.sh"
+    # shellcheck disable=SC2086
+    run fuzz-asan sh -c "$CC -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-sanitize=shift \
+        -ffp-contract=off -DOM_HOST -Ibuild/gen -o $B/fuzz_asan tests/host/fuzz_test.c $TRK $DSP -lm && $B/fuzz_asan 60 5000"
     for s in tests/scenarios/*.fd; do
         n=$(basename "$s" .fd)
         mkdir -p "build/scenarios-asan/$n"
@@ -90,6 +96,7 @@ if command -v node >/dev/null 2>&1; then
     fi
     run web-install node tests/web_install_test.mjs
     [ -f web/fm1drive.wasm ] && run web-editor node tests/web_editor_test.mjs
+    [ -f web/fm1drive.wasm ] && run web-fuzz node tests/web_fuzz_test.mjs ${WEB_FUZZ_SEEDS:-60}
 else
     echo "  skip web tests (no node)"
 fi

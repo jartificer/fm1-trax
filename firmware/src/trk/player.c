@@ -708,7 +708,22 @@ void player_reset_chips(void)
     uint32_t mute = player.mute, t = player.md.vgm_samples;
     void (*log)(void *, int, int, uint8_t, uint8_t) = player.md.log;
     void *log_ctx = player.md.log_ctx;
+    int32_t keep[10];                   /* the output filters go on through the reset: no step, no thump */
+    for (i = 0; i < 2; i++) {
+        keep[i] = player.md.lp[i];
+        keep[2 + i] = player.md.dc[i];
+        keep[4 + i] = player.md.dc_x[i];
+        keep[6 + i] = player.md.fm_prev[i];
+        keep[8 + i] = player.md.fm_next[i];
+    }
     md_init(&player.md, player.md.out_hz ? player.md.out_hz : 44100u, song.region & 1, song.chip & 1, song.filter % 3u);
+    for (i = 0; i < 2; i++) {
+        player.md.lp[i] = keep[i];
+        player.md.dc[i] = keep[2 + i];
+        player.md.dc_x[i] = keep[4 + i];
+        player.md.fm_prev[i] = keep[6 + i];
+        player.md.fm_next[i] = keep[8 + i];
+    }
     player.md.log = log;               /* a VGM being written goes on through the reset */
     player.md.log_ctx = log_ctx;
     player.md.vgm_samples = t;
@@ -839,7 +854,7 @@ void player_run_commands(void)
     }
 }
 
-void player_render(int32_t *out, uint32_t n)
+static void render(int32_t *out, uint32_t n)
 {
     if (player.lock) {                  /* the song is being loaded or saved: only the chips run */
         md_render(&player.md, out, n);
@@ -871,3 +886,44 @@ void player_render(int32_t *out, uint32_t n)
         n -= k;
     }
 }
+
+/* the safety net (as FM1-GM's): every sample the player hands on is clipped to 16 bits, which the
+ * device scales by the master (Q12, up to 4096) >> 4 into its 24-bit output: a mix louder than that
+ * (six FM channels and the PSG at full level can reach about 46000, more as the DC blocker
+ * overshoots) would otherwise wrap round to full scale of the other sign, a loud burst. A level no
+ * real mix reaches (PLAYER_GUARD, 18 dB over the clip) means the engine's state is broken: the block
+ * is dropped, the player stops and the chips start over, a click rather than the noise. */
+volatile uint32_t player_guard_trips;
+volatile int32_t player_raw_peak;            /* the last block's peak before the clip */
+
+void player_render(int32_t *out, uint32_t n)
+{
+    uint32_t i;
+    int32_t m = 0;
+    render(out, n);
+    for (i = 0; i < 2u * n; i++) {
+        int32_t v = out[i];
+        if (v > m)
+            m = v;
+        else if (-v > m)
+            m = -v;
+        out[i] = v > PLAYER_CLIP ? PLAYER_CLIP : v < -PLAYER_CLIP ? -PLAYER_CLIP : v;
+    }
+    player_raw_peak = m;
+    if (m > PLAYER_GUARD || m < 0) {           /* m < 0: -2^31, the one value with no magnitude */
+        for (i = 0; i < 2u * n; i++)
+            out[i] = 0;
+        player.playing = 0;
+        player_reset_chips();
+        for (i = 0; i < 2u; i++)           /* the filters too, this time: they may be what broke */
+            player.md.lp[i] = player.md.dc[i] = player.md.dc_x[i] = player.md.fm_prev[i] = player.md.fm_next[i] = 0;
+        player_guard_trips++;
+    }
+}
+
+#ifdef OM_HOST
+void player_test_poison(void)          /* tests only: the output filter's state absurd, as memory gone bad */
+{
+    player.md.dc[0] = player.md.dc[1] = 1 << 30;
+}
+#endif

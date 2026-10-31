@@ -1263,9 +1263,13 @@ function lcd() {
     if (p && ui.sub >= 5) { const f = m[p + (ui.sub <= 8 ? 3 : 4)]; fx = f ? cstr(x.web_fx_name(f)) || "not an effect" : ""; }
     $("lcd").innerHTML = `${playing ? "▶" : "■"} <b>${hex2(pos >>> 16)}:${hex2(pos & 0xFFFF)}</b> · ${chName(ch)} pat <b>${hex2(curPat())}</b> · oct <b>${ui.oct}</b> · ins <b>${hex2(ui.ins)}</b>${fx ? ` · <b>${esc(fx)}</b>` : ""}`;
 }
-let lastPlay = 0;
+let lastPlay = 0, trips = 0;
 function frame() {
     if (x) {
+        if (x.web_guard_trips() !== trips) {          // the sound's safety net went off (player_render)
+            trips = x.web_guard_trips();
+            say("the sound was reset by its safety net (a level no song reaches)", true);
+        }
         const playing = x.web_playing();
         if (playing && ui.follow) {
             const pos = x.web_pos();

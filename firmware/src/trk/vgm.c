@@ -169,8 +169,12 @@ uint32_t vgm_export(uint8_t *buf, uint32_t cap, uint32_t max_s)
     player.row_hook = row_hook;
     player_post(PC_PLAY, 0, 0, 0);
     player_run_commands();
-    while (player.playing && player.md.vgm_samples < max_s * 44100u && !v.over)
+    while (player.playing && player.md.vgm_samples < max_s * 44100u && !v.over) {
+        uint32_t i;
+        for (i = 0; i < 2u * 256u; i++)
+            scratch[i] = 0;
         player_render((int32_t *)scratch, 256);
+    }
     end_samples = player.md.vgm_samples;
     wait_to(end_samples);
     put(0x66);

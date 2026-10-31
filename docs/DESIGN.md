@@ -77,6 +77,17 @@ Accuracy is checked in the host tests by rendering the same register writes thro
 through Nuked-OPN2 (the cycle-accurate reference, fetched only for the tests, not built into the
 firmware) and comparing.
 
+### The safety net
+
+As in FM1-GM (whose 0.9.8 made a sudden loud noise), the sound has a safety net, in `player_render`
+so that the device, the simulator and the web pages all have it. Every sample is clipped to 16 bits:
+the device scales the mix by the master volume (up to x256) into its 24-bit output, and six FM
+channels and the PSG at full level can reach about 46000, which would otherwise wrap round to full
+scale of the other sign. The device clamps the 24-bit value once more. A block whose level no real
+mix reaches (`PLAYER_GUARD`, 18 dB over the clip, the loudest fuzzed mix being 2 dB under it) means
+the engine's state is broken: the block is dropped, the player stops and the chips start over, and
+the screen says SOUND RESET. `tests/host/fuzz_test.c` fuzzes the whole path (BUILDING.md).
+
 ### Limits kept on purpose
 
 6 FM voices and 4 PSG voices, no more: each tracker channel *is* one chip channel. One LFO for the
