@@ -85,6 +85,7 @@ if echo 'int main(void){return 0;}' | $CC -fsanitize=address,undefined -x c -o $
         mkdir -p "build/scenarios-asan/$n"
         run "scenario-$n-asan" "$B/drive_host_asan" "$s" "build/scenarios-asan/$n"
     done
+    command -v node >/dev/null 2>&1 && run ui-fuzz-asan env DRIVE_HOST="$B/drive_host_asan" node tests/ui_fuzz_test.mjs 40 5000
 fi
 # the web pages: the engine as WebAssembly (needs clang with the wasm32 target), the installer and the
 # editor's link, under Node

@@ -4,11 +4,12 @@
 // the knobs and deleted, the song started and stopped, views changed), then every key let go. After
 // that no channel may be left to the keys, nothing may sound once the song is stopped and the
 // releases have run out, and the output never goes past the clip. Run from the repo root after
-// host/build_host.sh:  node tests/ui_fuzz_test.mjs [SEEDS]
+// host/build_host.sh:  node tests/ui_fuzz_test.mjs [SEEDS] [FIRST]   (DRIVE_HOST: another build, as ASan's)
 import {execFileSync} from "node:child_process";
 import {mkdirSync, writeFileSync} from "node:fs";
 
-const seeds = +(process.argv[2] || 40), dir = "build/ui_fuzz";
+const seeds = +(process.argv[2] || 40), first = +(process.argv[3] || 1);
+const bin = process.env.DRIVE_HOST || "build/host/drive_host", dir = `build/ui_fuzz/${bin.split("/").pop()}`;
 mkdirSync(dir, {recursive: true});
 let r = 1;
 const rnd = () => { r ^= r << 13; r ^= r >>> 17; r ^= r << 5; return r >>> 0; };
@@ -44,15 +45,16 @@ function session() {
 }
 
 let fails = 0;
-for (let s = 1; s <= seeds; s++) {
+for (let s = first; s < first + seeds; s++) {
     r = (0x9E3779B9 * s | 1) >>> 0;
     const f = `${dir}/s${s}.fd`;
     writeFileSync(f, session());
     try {
-        execFileSync("build/host/drive_host", [f, dir], {encoding: "utf8"});
+        execFileSync(bin, [f, dir], {encoding: "utf8", stdio: ["ignore", "pipe", "pipe"]});
     } catch (e) {
         fails++;
-        console.log(`FAIL seed ${s} (${f}):\n` + (e.stdout || "").split("\n").filter(l => /FAIL|line/.test(l)).join("\n"));
+        console.log(`FAIL seed ${s} (${f})${e.signal ? `: crashed (${e.signal})` : ""}:\n` +
+            ((e.stdout || "") + (e.stderr || "")).split("\n").filter(l => /FAIL|line|error|ERROR|SUMMARY/.test(l)).slice(0, 12).join("\n"));
     }
 }
 console.log(`${seeds} sessions: ${seeds - fails} with no hanging note${fails ? `, ${fails} failures` : ""}`);
