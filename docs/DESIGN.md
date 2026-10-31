@@ -273,7 +273,7 @@ song title in raster-bar chrome. LFO mutes the channel ALGORITHM points at; KNOB
 
 ### Look and feel
 
-16-bit console era, and fun: a boot intro (FM1·DRIVE in chrome letters over a parallax star field,
+16-bit console era, and fun: a boot intro (FM1-TRAX in chrome letters over a parallax star field,
 with a little FM chime), CRT scanlines (Setup: on / off), raster-bar headers, channel colours, notes
 flashing as they play, scopes in the pattern view's header, a palette-cycling cursor, screen changes as
 horizontal wipes. Colour schemes in Setup, including high-contrast and colour-blind-safe ones as in

@@ -308,7 +308,7 @@ async function usePackage(bytes, name, count = null) {
 // same file from the release's tag on raw.githubusercontent.com (which does), checks it against the
 // asset's SHA-256, and after an install fetches the asset once, unread (no-cors), which GitHub counts.
 // Without GitHub (offline, or its 60 an hour API limit) it uses the copy bundled with the page.
-const REPO = "jartificer/fm1-drive", ASSET = "fm1trax.fwsc", OLD_ASSET = "fm1drive.fwsc";   // releases from before the rename
+const REPO = "jartificer/fm1-trax", ASSET = "fm1trax.fwsc", OLD_ASSET = "fm1drive.fwsc";   // releases from before the rename
 async function latestRelease() {
     const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
     if (!r.ok) throw new Error(`GitHub ${r.status}`);
