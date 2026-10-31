@@ -42,7 +42,7 @@ which governs. Know the [recovery steps](#recovery) before you install.
 
 ## Installing
 
-Get `fm1trax.fwsc` (it is kept in `web/`, or build it yourself: see [BUILDING.md](BUILDING.md)). Then,
+Get `fm1trax.fwsc` from the [releases](https://github.com/jartificer/fm1-trax/releases) (it is also kept in `web/`, or build it yourself: see [BUILDING.md](BUILDING.md)). Then,
 with the FM-1 connected over USB:
 
 ```
@@ -58,6 +58,12 @@ into one zip.
 
 This works from the stock firmware or any Felucca-based firmware (FM1-GM, X0X, FoMni). To go back,
 install M-VAVE's stock package the same way, or with M-VAVE's updater.
+
+FM1-TRAX keeps its songs and instruments in its own format. It **cannot read the projects, patterns,
+presets or samples of other firmwares** (the stock firmware or other custom firmwares), and its song
+store may overwrite data another firmware left in the flash, so back up anything you want to keep
+before you install it. Likewise, other firmwares cannot read FM1-TRAX's songs: back them up from the
+web editor (as `.fm1d` files or VGM) before you install something else.
 
 Or from the browser: the page in `web/` installs over Web MIDI in Chrome, Edge or Opera on a computer
 (the same update as `fm1_install.py`).
