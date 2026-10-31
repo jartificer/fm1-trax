@@ -870,14 +870,14 @@ void player_run_commands(void)
 static void render(int32_t *out, uint32_t n)
 {
     if (player.lock) {                  /* the song is being loaded or saved: only the chips run */
-        md_render(&player.md, out, n);
+        md_render_far(&player.md, out, n);
         return;
     }
     player_run_commands();
     while (n) {
         uint32_t k;
         if (keyon_mask) {               /* key on a sample after the key off, so that it retriggers */
-            md_render(&player.md, out, 1);
+            md_render_far(&player.md, out, 1);
             keyons();
             out += 2;
             n--;
@@ -893,7 +893,7 @@ static void render(int32_t *out, uint32_t n)
         k = player.tick_left >> 16;
         if (k > n)
             k = n;
-        md_render(&player.md, out, k);
+        md_render_far(&player.md, out, k);
         player.tick_left -= k << 16;
         out += 2u * k;
         n -= k;

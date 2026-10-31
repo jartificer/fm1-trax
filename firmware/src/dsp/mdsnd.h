@@ -57,3 +57,14 @@ void md_dac_stop(md_t *m);
 void md_mute(md_t *m, uint32_t mask);  /* bit per channel, MD_NCH of them */
 /* n stereo frames, interleaved, added to out[]; one FM channel at full level is about 5,500 */
 void md_render(md_t *m, int32_t *out, uint32_t n);
+/* md_render from code in the XIP flash: on the FM-1 it runs from RAM (dsp_hot.h), out of a direct
+ * call's reach, so through a pointer the compiler cannot fold back */
+static inline void md_render_far(md_t *m, int32_t *out, uint32_t n)
+{
+#ifdef __PI32V2__
+    void (*volatile f)(md_t *, int32_t *, uint32_t) = md_render;
+    f(m, out, n);
+#else
+    md_render(m, out, n);
+#endif
+}

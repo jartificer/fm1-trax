@@ -51,6 +51,16 @@ run tracker sh -c "$CC $CFLAGS -Ibuild/gen -o $B/trk_test tests/host/trk_test.c 
 # fuzzing the sound path for loud noise: random songs, live commands, damaged streams, and the safety net
 # shellcheck disable=SC2086
 run fuzz sh -c "$CC $CFLAGS -DOM_HOST -Ibuild/gen -o $B/fuzz_test tests/host/fuzz_test.c $TRK $DSP -lm && $B/fuzz_test ${FUZZ_SEEDS:-300}"
+# the engine's output, hashed sample by sample: an optimisation must not change a single sample
+# shellcheck disable=SC2086
+run golden sh -c "$CC $CFLAGS -DOM_HOST -Ibuild/gen -o $B/golden_test tests/host/golden_test.c $TRK $DSP -lm && $B/golden_test tests/host/golden.txt 200"
+# the time budget: host instructions a block (with clang, as the FM-1's compiler)
+if command -v clang >/dev/null 2>&1 && command -v valgrind >/dev/null 2>&1; then
+    # shellcheck disable=SC2086
+    run cost sh -c "clang $CFLAGS -Ifirmware/src -Ibuild/gen -o $B/cost_test tests/host/cost_test.c $TRK $DSP -lm && sh tests/cost_check.sh $B/cost_test"
+else
+    echo "  skip cost (needs clang and valgrind)"
+fi
 run storage sh -c "$CC -O2 -Wall -Werror -o $B/storage_test tests/storage_test.c && $B/storage_test"
 run lz4 sh -c "$CC -O2 -Wall -Werror -o $B/lz4_test tests/host/lz4_test.c && $B/lz4_test"
 # the update path, against the firmware package (Felucca's tests; needs ./build.sh)

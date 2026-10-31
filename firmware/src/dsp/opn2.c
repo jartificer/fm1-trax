@@ -27,12 +27,13 @@
  *   IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  *   OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #include "opn2.h"
+#include "dsp_hot.h"
 
 enum { EG_ATTACK, EG_DECAY, EG_SUSTAIN, EG_RELEASE };
 #define EG_QUIET 0x380u
 
 /* the chip's quarter log-sine ROM: -log2(sin) as 4.8 fixed point */
-static const uint16_t SIN_ATT[256] = {
+static const uint16_t SIN_ATT[256] DSP_HOT_DATA = {
     0x859,0x6c3,0x607,0x58b,0x52e,0x4e4,0x4a6,0x471,0x443,0x41a,0x3f5,0x3d3,0x3b5,0x398,0x37e,0x365,
     0x34e,0x339,0x324,0x311,0x2ff,0x2ed,0x2dc,0x2cd,0x2bd,0x2af,0x2a0,0x293,0x286,0x279,0x26d,0x261,
     0x256,0x24b,0x240,0x236,0x22c,0x222,0x218,0x20f,0x206,0x1fd,0x1f5,0x1ec,0x1e4,0x1dc,0x1d4,0x1cd,
@@ -52,7 +53,7 @@ static const uint16_t SIN_ATT[256] = {
 
 /* the exponent ROM: 10-bit mantissas, implicit 0x400, reversed and shifted up by 2 (ymfm's form) */
 #define X(a) ((((a) | 0x400) << 2))
-static const uint16_t POWER[256] = {
+static const uint16_t POWER[256] DSP_HOT_DATA = {
     X(0x3fa),X(0x3f5),X(0x3ef),X(0x3ea),X(0x3e4),X(0x3df),X(0x3da),X(0x3d4),X(0x3cf),X(0x3c9),X(0x3c4),X(0x3bf),X(0x3b9),X(0x3b4),X(0x3ae),X(0x3a9),
     X(0x3a4),X(0x39f),X(0x399),X(0x394),X(0x38f),X(0x38a),X(0x384),X(0x37f),X(0x37a),X(0x375),X(0x370),X(0x36a),X(0x365),X(0x360),X(0x35b),X(0x356),
     X(0x351),X(0x34c),X(0x347),X(0x342),X(0x33d),X(0x338),X(0x333),X(0x32e),X(0x329),X(0x324),X(0x31f),X(0x31a),X(0x315),X(0x310),X(0x30b),X(0x306),
@@ -72,7 +73,7 @@ static const uint16_t POWER[256] = {
 #undef X
 
 /* the envelope's increments: 8 steps of 4 bits per rate */
-static const uint32_t EG_INC[64] = {
+static const uint32_t EG_INC[64] DSP_HOT_DATA = {
     0x00000000, 0x00000000, 0x10101010, 0x10101010, 0x10101010, 0x10101010, 0x11101110, 0x11101110,
     0x10101010, 0x10111010, 0x11101110, 0x11111110, 0x10101010, 0x10111010, 0x11101110, 0x11111110,
     0x10101010, 0x10111010, 0x11101110, 0x11111110, 0x10101010, 0x10111010, 0x11101110, 0x11111110,
@@ -89,29 +90,30 @@ static const uint8_t DETUNE[32][4] = {
     {0, 5, 11, 16}, {0, 6, 12, 17}, {0, 6, 13, 19}, {0, 7, 14, 20}, {0, 8, 16, 22}, {0, 8, 16, 22}, {0, 8, 16, 22}, {0, 8, 16, 22}};
 
 /* LFO PM: two shifts of the F-number's top 7 bits per depth and step */
-static const uint8_t PM_SHIFTS[8][8] = {
+static const uint8_t PM_SHIFTS[8][8] DSP_HOT_DATA = {
     {0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77}, {0x77, 0x77, 0x77, 0x77, 0x72, 0x72, 0x72, 0x72},
     {0x77, 0x77, 0x77, 0x72, 0x72, 0x72, 0x17, 0x17}, {0x77, 0x77, 0x72, 0x72, 0x17, 0x17, 0x12, 0x12},
     {0x77, 0x77, 0x72, 0x17, 0x17, 0x17, 0x12, 0x07}, {0x77, 0x77, 0x17, 0x12, 0x07, 0x07, 0x02, 0x01},
     {0x77, 0x77, 0x17, 0x12, 0x07, 0x07, 0x02, 0x01}, {0x77, 0x77, 0x17, 0x12, 0x07, 0x07, 0x02, 0x01}};
 
-static const uint8_t LFO_MAX[8] = {109, 78, 72, 68, 63, 45, 9, 6};
+static const uint8_t LFO_MAX[8] DSP_HOT_DATA = {109, 78, 72, 68, 63, 45, 9, 6};
 
 /* each algorithm: bit 0 OP2's input (0 none, 1 OP1), bits 1-3 OP3's, 4-6 OP4's (0 none, 1 OP1, 2 OP2,
  * 5 OP1+OP2, 6 OP1+OP3, 7 OP2+OP3), 7-9 OP1, OP2, OP3 sound too (OP4 always does) */
 #define ALG(o2, o3, o4, c1, c2, c3) ((o2) | ((o3) << 1) | ((o4) << 4) | ((c1) << 7) | ((c2) << 8) | ((c3) << 9))
-static const uint16_t ALGS[8] = {
+static const uint16_t ALGS[8] DSP_HOT_DATA = {
     ALG(1, 2, 3, 0, 0, 0), ALG(0, 5, 3, 0, 0, 0), ALG(0, 2, 6, 0, 0, 0), ALG(1, 0, 7, 0, 0, 0),
     ALG(1, 0, 3, 0, 1, 0), ALG(1, 1, 1, 0, 1, 1), ALG(1, 0, 0, 0, 1, 1), ALG(0, 0, 0, 1, 1, 1)};
 
 /* the operators' register offsets in algorithm order: OP1 0x30, OP2 0x38, OP3 0x34, OP4 0x3C */
 static const uint8_t OPREG[4] = {0, 8, 4, 12};
 
-static inline uint32_t chbase(uint32_t ch) { return (ch >= 3u ? 0x100u : 0u) + ch % 3u; }
+static const uint16_t CHBASE[OPN2_NCH] DSP_HOT_DATA = {0x000, 0x001, 0x002, 0x100, 0x101, 0x102};
+DSP_INLINE uint32_t chbase(uint32_t ch) { return CHBASE[ch]; }
 
-static inline uint32_t eff_rate(uint32_t raw, uint32_t ks) { return raw ? (raw + ks > 63u ? 63u : raw + ks) : 0u; }
+DSP_INLINE uint32_t eff_rate(uint32_t raw, uint32_t ks) { return raw ? (raw + ks > 63u ? 63u : raw + ks) : 0u; }
 
-static uint32_t phase_step(const opn2_t *c, uint32_t ch, const opn2_op_t *o, int32_t pm)
+DSP_HOT static uint32_t phase_step(const opn2_t *c, uint32_t ch, const opn2_op_t *o, int32_t pm)
 {
     uint32_t fnum = (o->block_freq & 0x7FFu) << 1, block, s;
     uint32_t pms = c->reg[0xB4u + chbase(ch)] & 7u;
@@ -131,9 +133,15 @@ static uint32_t phase_step(const opn2_t *c, uint32_t ch, const opn2_op_t *o, int
 }
 
 /* the operators' cached values from the registers */
-static void prepare_ch(opn2_t *c, uint32_t ch)
+DSP_HOT static void prepare_ch(opn2_t *c, uint32_t ch)
 {
     uint32_t b = chbase(ch), i;
+    opn2_ch_t *h = &c->ch[ch];
+    h->alg = ALGS[c->reg[0xB0u + b] & 7u];
+    h->fbk = (c->reg[0xB0u + b] >> 3) & 7u;
+    h->pan = c->reg[0xB4u + b];
+    h->pms = h->pan & 7u;
+    h->am_sh = (uint8_t)((1u << (((h->pan >> 4) & 3u) ^ 3u)) - 1u);
     for (i = 0; i < 4u; i++) {
         opn2_op_t *o = &c->ch[ch].op[i];
         uint32_t r = b + OPREG[i], bf, kc, ks, dt, sl;
@@ -165,10 +173,12 @@ static void prepare_ch(opn2_t *c, uint32_t ch)
         o->rate[EG_RELEASE] = (uint8_t)eff_rate((c->reg[0x80u + r] & 15u) * 4u + 2u, ks);
         o->ssg = c->reg[0x90u + r] & 15u;
         o->am = c->reg[0x60u + r] >> 7;
+        o->pm_at = -128;
     }
+    c->ssg_fix |= (uint8_t)(1u << ch);                      /* SSG-EG may be off now: see opn2_clock */
 }
 
-static void start_attack(opn2_op_t *o, int restart)
+DSP_HOT static void start_attack(opn2_op_t *o, int restart)
 {
     if (o->state == EG_ATTACK)
         return;
@@ -181,7 +191,7 @@ static void start_attack(opn2_op_t *o, int restart)
         o->env = 0;
 }
 
-static void start_release(opn2_op_t *o)
+DSP_HOT static void start_release(opn2_op_t *o)
 {
     if (o->state >= EG_RELEASE)
         return;
@@ -192,7 +202,7 @@ static void start_release(opn2_op_t *o)
     }
 }
 
-static void clock_ssg(opn2_op_t *o)
+DSP_HOT static void clock_ssg(opn2_op_t *o)
 {
     uint32_t mode = o->ssg & 7u;
     if (!(o->env & 0x200u))
@@ -212,7 +222,8 @@ static void clock_ssg(opn2_op_t *o)
         o->env = 0x3FF;
 }
 
-static void clock_env(opn2_op_t *o, uint32_t cnt)
+/* go: bit s set when a rate of shift s steps on this count, ((cnt << s) & 0x7FF) == 0 (env_go) */
+DSP_INLINE void clock_env(opn2_op_t *o, uint32_t cnt, uint32_t go)
 {
     uint32_t rate, shift, inc;
     if (o->state == EG_ATTACK && o->env == 0)
@@ -221,9 +232,9 @@ static void clock_env(opn2_op_t *o, uint32_t cnt)
         o->state = EG_SUSTAIN;
     rate = o->rate[o->state];
     shift = rate >> 2;
-    cnt <<= shift;
-    if (cnt & 0x7FFu)
+    if (!((go >> shift) & 1u))
         return;
+    cnt <<= shift;
     inc = (EG_INC[rate] >> (4u * ((cnt >> (shift <= 11u ? 11u : shift)) & 7u))) & 15u;
     if (o->state == EG_ATTACK) {
         if (rate < 62u)
@@ -241,7 +252,15 @@ static void clock_env(opn2_op_t *o, uint32_t cnt)
     }
 }
 
-static inline uint32_t env_att(const opn2_op_t *o, uint32_t am)
+DSP_INLINE uint32_t env_go(uint32_t cnt)
+{
+    uint32_t tz = 0;
+    while (tz < 11u && !((cnt >> tz) & 1u))
+        tz++;
+    return (0xFFFFu << (11u - tz)) & 0xFFFFu;
+}
+
+DSP_INLINE uint32_t env_att(const opn2_op_t *o, uint32_t am)
 {
     uint32_t r = o->env;
     if (o->ssg_inv)
@@ -252,7 +271,7 @@ static inline uint32_t env_att(const opn2_op_t *o, uint32_t am)
     return r > 0x3FFu ? 0x3FFu : r;
 }
 
-static inline int32_t op_out(const opn2_op_t *o, uint32_t phase, uint32_t am)
+DSP_INLINE int32_t op_out(const opn2_op_t *o, uint32_t phase, uint32_t am)
 {
     uint32_t s, idx, v;
     if (o->env > EG_QUIET)
@@ -264,7 +283,7 @@ static inline int32_t op_out(const opn2_op_t *o, uint32_t phase, uint32_t am)
     return (idx & 0x200u) ? -(int32_t)v : (int32_t)v;
 }
 
-static inline int32_t clampi(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
+DSP_INLINE int32_t clampi(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
 
 void opn2_reset(opn2_t *c, int chip)
 {
@@ -336,13 +355,19 @@ void opn2_write(opn2_t *c, int port, uint8_t reg, uint8_t val)
             c->reg[idx] = val;
             c->reg[idx | 4u] = c->reg[latch];
         }
-        c->dirty = 0x3F;
+        /* the channel's frequency; A8-AE: channel 3's special-mode ones */
+        c->dirty |= (uint8_t)((reg & 8u) ? 1u << 2 : 1u << ((reg & 3u) + 3u * ((uint32_t)port & 1u)));
         return;
     }
     if ((reg & 0xF8u) == 0xB8u)
         return;
     c->reg[idx] = val;
-    c->dirty = 0x3F;
+    /* what the channels cache from the registers: their own registers, and channel 3's mode */
+    if (reg >= 0x30u) {
+        if ((reg & 3u) != 3u)
+            c->dirty |= (uint8_t)(1u << ((reg & 3u) + 3u * ((uint32_t)port & 1u)));
+    } else if (idx == 0x27u)
+        c->dirty |= 1u << 2;
     if (idx == 0x28u) {                                     /* key on / off */
         uint32_t ch = val & 3u, i;
         if (ch == 3u)
@@ -352,13 +377,14 @@ void opn2_write(opn2_t *c, int port, uint8_t reg, uint8_t val)
             opn2_op_t *o = &c->ch[ch].op[i];               /* bits 4-7: OP1-OP4 */
             o->keyon = (uint8_t)((o->keyon & ~1u) | ((val >> (4u + i)) & 1u));
         }
+        c->keys_dirty = 1;
     } else if (idx == 0x27u || idx == 0x24u || idx == 0x25u || idx == 0x26u)
         timer_load(c);
 }
 
 uint8_t opn2_status(const opn2_t *c) { return c->status; }
 
-static int32_t lfo_clock(opn2_t *c)
+DSP_HOT static int32_t lfo_clock(opn2_t *c)
 {
     uint32_t sub;
     int32_t pm;
@@ -379,7 +405,7 @@ static int32_t lfo_clock(opn2_t *c)
     return ((c->lfo_counter >> 14) & 1u) ? -pm : pm;
 }
 
-static void timers_clock(opn2_t *c)
+DSP_HOT static void timers_clock(opn2_t *c)
 {
     if (c->ta_run && --c->ta_count <= 0) {
         if (c->reg[0x27] & 4u)
@@ -388,6 +414,7 @@ static void timers_clock(opn2_t *c)
             uint32_t i;
             for (i = 0; i < 4u; i++)
                 c->ch[2].op[i].keyon |= 2u;
+            c->keys_dirty = 1;
         }
         c->ta_count = 1024 - (int32_t)(((uint32_t)c->reg[0x24] << 2) | (c->reg[0x25] & 3u));
     }
@@ -398,97 +425,337 @@ static void timers_clock(opn2_t *c)
     }
 }
 
-static inline int32_t ladder(int32_t v) { return v < 0 ? v - 3 : v + 4; }
+DSP_INLINE int32_t ladder(int32_t v) { return v < 0 ? v - 3 : v + 4; }
 
-void opn2_clock(opn2_t *c, int32_t *l, int32_t *r)
+/* an operator at rest: released and fully attenuated. Nothing it does can be heard until a key-on,
+ * and a key-on starts its phase over: its envelope, SSG-EG and phase need not run meanwhile */
+DSP_INLINE int op_idle(const opn2_op_t *o) { return o->env == 0x3FFu && o->state == EG_RELEASE; }
+
+/* a sample's start, after the timers: the registers' effects, then the key states (only after a key
+ * request), then SSG-EG switched off */
+DSP_INLINE void begin(opn2_t *c)
 {
     uint32_t ch, i;
-    int32_t pm, sl = 0, sr = 0;
-    uint32_t envclk;
-
-    timers_clock(c);
-    /* prepare: the registers' effects, then the key states */
-    for (ch = 0; ch < OPN2_NCH; ch++) {
-        if (c->dirty & (1u << ch))
-            prepare_ch(c, ch);
-        for (i = 0; i < 4u; i++) {
-            opn2_op_t *o = &c->ch[ch].op[i];
-            uint8_t k = o->keyon != 0;
-            if (k != o->key) {
-                o->key = k;
-                if (k)
-                    start_attack(o, 0);
-                else
-                    start_release(o);
-            }
-            o->keyon &= 1u;                                 /* a CSM key-on lasts one sample */
-        }
+    /* prepare: the registers' effects, then the key states (only after a key request) */
+    if (c->dirty) {
+        for (ch = 0; ch < OPN2_NCH; ch++)
+            if (c->dirty & (1u << ch))
+                prepare_ch(c, ch);
+        c->dirty = 0;
     }
-    c->dirty = 0;
+    if (c->keys_dirty) {
+        uint32_t csm = 0;
+        for (ch = 0; ch < OPN2_NCH; ch++)
+            for (i = 0; i < 4u; i++) {
+                opn2_op_t *o = &c->ch[ch].op[i];
+                uint8_t k = o->keyon != 0;
+                if (k != o->key) {
+                    o->key = k;
+                    if (k)
+                        start_attack(o, 0);
+                    else
+                        start_release(o);
+                }
+                csm |= o->keyon & 2u;
+                o->keyon &= 1u;                             /* a CSM key-on lasts one sample */
+            }
+        c->keys_dirty = csm != 0;                           /* its end is looked at next sample */
+    }
+    if (c->ssg_fix) {                                       /* an operator without SSG-EG is never inverted */
+        for (ch = 0; ch < OPN2_NCH; ch++)
+            if (c->ssg_fix & (1u << ch))
+                for (i = 0; i < 4u; i++)
+                    if (!(c->ch[ch].op[i].ssg & 8u))
+                        c->ch[ch].op[i].ssg_inv = 0;
+        c->ssg_fix = 0;
+    }
+}
+
+/* a sample after its start (begin) */
+DSP_HOT static void clock_rest(opn2_t *c, int32_t *l, int32_t *r)
+{
+    uint32_t ch, i, lfo_on, envclk, envcnt, envgo;
+    int32_t pm, sl = 0, sr = 0;
 
     if (((++c->env_counter) & 3u) == 3u)
         c->env_counter++;
     envclk = (c->env_counter & 3u) == 0;
+    envcnt = c->env_counter >> 2;
+    envgo = envclk ? env_go(envcnt) : 0;
     pm = lfo_clock(c);
     c->lfo_pm = (int8_t)pm;
+    lfo_on = c->reg[0x22] & 8u;
 
     for (ch = 0; ch < OPN2_NCH; ch++) {
         opn2_ch_t *h = &c->ch[ch];
-        uint32_t b = chbase(ch), pms = c->reg[0xB4u + b] & 7u;
-        uint32_t lfo_on = c->reg[0x22] & 8u;
+        uint32_t fbk, alg, am, busy = 0, pm_on = lfo_on && h->pms;
+        int32_t out[8], res, mod;
         h->fb[0] = h->fb[1];
         h->fb[1] = h->fb_in;
         for (i = 0; i < 4u; i++) {
             opn2_op_t *o = &h->op[i];
-            if (o->ssg & 8u)
+            if (op_idle(o))
+                continue;
+            busy = 1;
+            if (o->ssg & 8u)                                /* (without, ssg_inv stays 0: ssg_fix) */
                 clock_ssg(o);
-            else
-                o->ssg_inv = 0;
             if (envclk)
-                clock_env(o, c->env_counter >> 2);
-            o->phase += (lfo_on && pms) ? phase_step(c, ch, o, pm) : o->step;
+                clock_env(o, envcnt, envgo);
+            if (pm_on) {
+                if (o->pm_at != pm) {
+                    o->pm_step = phase_step(c, ch, o, pm);
+                    o->pm_at = (int8_t)pm;
+                }
+                o->phase += o->pm_step;
+            } else
+                o->phase += o->step;
         }
-    }
-
-    for (ch = 0; ch < OPN2_NCH; ch++) {
-        opn2_ch_t *h = &c->ch[ch];
-        uint32_t b = chbase(ch), fbk, alg, am, ams;
-        uint8_t pan = c->reg[0xB4u + b];
-        int32_t out[8], res, mod;
-        fbk = (c->reg[0xB0u + b] >> 3) & 7u;
-        alg = ALGS[c->reg[0xB0u + b] & 7u];
-        ams = (pan >> 4) & 3u;
-        am = (uint32_t)(c->lfo_am << 1) >> ((1u << (ams ^ 3u)) - 1u);
-        mod = fbk ? (h->fb[0] + h->fb[1]) >> (10u - fbk) : 0;
-        out[0] = 0;
-        out[1] = h->fb_in = (int16_t)op_out(&h->op[0], (h->op[0].phase >> 10) + (uint32_t)mod, am);
-        if (ch == 5u && c->dac_en) {
-            res = (int32_t)(int16_t)(c->dac << 7) >> 7;     /* the DAC replaces channel 6 */
+        if (!busy) {                                        /* all four at rest: silent */
+            res = 0;
+            h->fb_in = 0;
         } else {
-            out[2] = op_out(&h->op[1], (h->op[1].phase >> 10) + (uint32_t)(out[alg & 1u] >> 1), am);
-            out[5] = out[1] + out[2];
-            out[3] = op_out(&h->op[2], (h->op[2].phase >> 10) + (uint32_t)(out[(alg >> 1) & 7u] >> 1), am);
-            out[6] = out[1] + out[3];
-            out[7] = out[2] + out[3];
-            res = op_out(&h->op[3], (h->op[3].phase >> 10) + (uint32_t)(out[(alg >> 4) & 7u] >> 1), am) >> 5;
-            if (alg & 0x080u)
-                res = clampi(res + (out[1] >> 5), -257, 256);
-            if (alg & 0x100u)
-                res = clampi(res + (out[2] >> 5), -257, 256);
-            if (alg & 0x200u)
-                res = clampi(res + (out[3] >> 5), -257, 256);
+            fbk = h->fbk;
+            alg = h->alg;
+            am = (uint32_t)(c->lfo_am << 1) >> h->am_sh;
+            mod = fbk ? (h->fb[0] + h->fb[1]) >> (10u - fbk) : 0;
+            out[0] = 0;
+            out[1] = h->fb_in = (int16_t)op_out(&h->op[0], (h->op[0].phase >> 10) + (uint32_t)mod, am);
+            if (ch == 5u && c->dac_en)
+                res = 0;                                    /* OP1 only, for its feedback */
+            else {
+                out[2] = op_out(&h->op[1], (h->op[1].phase >> 10) + (uint32_t)(out[alg & 1u] >> 1), am);
+                out[5] = out[1] + out[2];
+                out[3] = op_out(&h->op[2], (h->op[2].phase >> 10) + (uint32_t)(out[(alg >> 1) & 7u] >> 1), am);
+                out[6] = out[1] + out[3];
+                out[7] = out[2] + out[3];
+                res = op_out(&h->op[3], (h->op[3].phase >> 10) + (uint32_t)(out[(alg >> 4) & 7u] >> 1), am) >> 5;
+                if (alg & 0x080u)
+                    res = clampi(res + (out[1] >> 5), -257, 256);
+                if (alg & 0x100u)
+                    res = clampi(res + (out[2] >> 5), -257, 256);
+                if (alg & 0x200u)
+                    res = clampi(res + (out[3] >> 5), -257, 256);
+            }
         }
+        if (ch == 5u && c->dac_en)
+            res = (int32_t)(int16_t)(c->dac << 7) >> 7;     /* the DAC replaces channel 6 */
         if (c->mute & (1u << ch))
             res = 0;
         c->out[ch] = (int16_t)res;
         if (c->chip == OPN2_YM2612) {
-            sl += ladder((pan & 0x80u) ? res : 0);
-            sr += ladder((pan & 0x40u) ? res : 0);
+            sl += ladder((h->pan & 0x80u) ? res : 0);
+            sr += ladder((h->pan & 0x40u) ? res : 0);
         } else {
-            sl += (pan & 0x80u) ? res : 0;
-            sr += (pan & 0x40u) ? res : 0;
+            sl += (h->pan & 0x80u) ? res : 0;
+            sr += (h->pan & 0x40u) ? res : 0;
         }
     }
     *l = sl;
     *r = sr;
+}
+
+DSP_HOT void opn2_clock(opn2_t *c, int32_t *l, int32_t *r)
+{
+    timers_clock(c);
+    begin(c);
+    clock_rest(c, l, r);
+}
+
+/* ------------------------------------------------------------ a block --- */
+#define SILENT 0xFFFFu                                      /* an operator's attenuation when quiet */
+
+static struct {
+    uint32_t go[OPN2_BLOCK];                                /* the envelope's step mask (env_go), 0: no step */
+    uint32_t cnt[OPN2_BLOCK];                               /* the envelope's count */
+    int8_t pm[OPN2_BLOCK];                                  /* the LFO's PM and AM */
+    uint8_t am[OPN2_BLOCK];
+    uint16_t ph[4][OPN2_BLOCK], att[4][OPN2_BLOCK];         /* a channel's operators: phase >> 10, attenuation */
+} blk;
+
+/* one operator through the block: its envelope, SSG-EG and phase, sample by sample as opn2_clock runs
+ * them (the operators do not affect each other there), and what op_out needs of it at each sample.
+ * Its attenuation (env_att) is worked out again only when the envelope or SSG-EG moved it. Returns
+ * the samples it was not at rest for: at rest it stays so (no key-on within a block). */
+DSP_INLINE uint32_t op_block(opn2_t *c, uint32_t ch, opn2_op_t *o, uint32_t pm_on, uint32_t am_sh,
+                             uint16_t *restrict ph, uint16_t *restrict att, uint32_t n)
+{
+    uint32_t k = 0, j, base = 0, quiet = 0, moved = 1, ssg = o->ssg & 8u, am = o->am;
+    uint32_t phase = o->phase, step = o->step;
+    int32_t pm_at = o->pm_at;
+    if (op_idle(o))
+        goto rest;
+    if (pm_on && pm_at != -128)
+        step = o->pm_step;
+    for (; k < n; k++) {
+        if (ssg) {                                          /* (it may restart the phase) */
+            o->phase = phase;
+            clock_ssg(o);
+            phase = o->phase;
+            moved = 1;
+        }
+        if (blk.go[k]) {
+            clock_env(o, blk.cnt[k], blk.go[k]);
+            moved = 1;
+        }
+        if (pm_on && blk.pm[k] != pm_at) {
+            pm_at = blk.pm[k];
+            step = phase_step(c, ch, o, pm_at);
+        }
+        phase += step;
+        ph[k] = (uint16_t)(phase >> 10);
+        if (moved) {                                        /* env_att without the LFO's AM */
+            uint32_t e = o->env;
+            quiet = e > EG_QUIET;
+            if (o->ssg_inv)
+                e = (0x200u - e) & 0x3FFu;
+            base = e + o->tl;
+            if (!am && base > 0x3FFu)
+                base = 0x3FF;
+        }
+        if (quiet)
+            att[k] = SILENT;
+        else if (am) {
+            uint32_t a = base + ((uint32_t)(blk.am[k] << 1) >> am_sh);
+            att[k] = (uint16_t)(a > 0x3FFu ? 0x3FFu : a);
+        } else
+            att[k] = (uint16_t)base;
+        if (moved) {
+            moved = 0;
+            if (op_idle(o)) {                               /* at rest from the next sample on */
+                k++;
+                break;
+            }
+        }
+    }
+    o->phase = phase;
+    if (pm_on) {
+        o->pm_at = (int8_t)pm_at;
+        o->pm_step = step;
+    }
+rest:
+    for (j = k; j < n; j++)
+        att[j] = SILENT;
+    return k;
+}
+
+/* op_out from op_block's record */
+DSP_INLINE int32_t op_rec(uint32_t phase, uint32_t att)
+{
+    uint32_t s, idx, v;
+    if (att == SILENT)
+        return 0;
+    idx = phase & 0x3FFu;
+    s = SIN_ATT[((idx & 0x100u) ? ~idx : idx) & 0xFFu];
+    v = s + (att << 2);
+    v = (uint32_t)POWER[v & 0xFFu] >> (v >> 8);
+    return (idx & 0x200u) ? -(int32_t)v : (int32_t)v;
+}
+
+DSP_HOT void opn2_render(opn2_t *c, uint32_t n, const uint16_t *dac, int32_t *l, int32_t *r,
+                         int16_t (*outs)[OPN2_NCH])
+{
+    uint32_t ch, i, k, lfo_on;
+    if (n > OPN2_BLOCK)
+        n = OPN2_BLOCK;
+    /* CSM can key channel 3 on at any sample: then a sample at a time */
+    if ((c->reg[0x27] & 0xC0u) == 0x80u && c->ta_run)
+        goto by_sample;
+    timers_clock(c);
+    begin(c);
+    if (c->keys_dirty)                                      /* a CSM key-on's end still to come */
+        goto by_sample_1;
+    /* what the whole chip does at each sample: the timers, the envelope clock, the LFO */
+    for (k = 0; k < n; k++) {
+        uint32_t ec;
+        if (k)
+            timers_clock(c);
+        if (((++c->env_counter) & 3u) == 3u)
+            c->env_counter++;
+        ec = c->env_counter;
+        blk.cnt[k] = ec >> 2;
+        blk.go[k] = (ec & 3u) == 0 ? env_go(ec >> 2) : 0;
+        blk.pm[k] = (int8_t)lfo_clock(c);
+        blk.am[k] = c->lfo_am;
+        l[k] = r[k] = 0;
+    }
+    c->lfo_pm = blk.pm[n - 1];
+    lfo_on = c->reg[0x22] & 8u;
+
+    for (ch = 0; ch < OPN2_NCH; ch++) {
+        opn2_ch_t *h = &c->ch[ch];
+        uint32_t live = 0, alg = h->alg, fbk = h->fbk, am_sh = h->am_sh, pan = h->pan;
+        uint32_t dac_ch = ch == 5u && c->dac_en, mute = (c->mute >> ch) & 1u;
+        int32_t fb0 = h->fb[0], fb1 = h->fb[1], fb_in = h->fb_in, res = 0;
+        for (i = 0; i < 4u; i++) {                          /* how long any operator runs */
+            uint32_t m = op_block(c, ch, &h->op[i], lfo_on && h->pms, am_sh, blk.ph[i], blk.att[i], n);
+            if (m > live)
+                live = m;
+        }
+        for (k = 0; k < n; k++) {
+            fb0 = fb1;
+            fb1 = fb_in;
+            if (k >= live) {                                /* all four at rest */
+                res = 0;
+                fb_in = 0;
+            } else {
+                int32_t out[8], mod = fbk ? (fb0 + fb1) >> (10u - fbk) : 0;
+                out[0] = 0;
+                out[1] = fb_in = (int16_t)op_rec(blk.ph[0][k] + (uint32_t)mod, blk.att[0][k]);
+                if (dac_ch)
+                    res = 0;
+                else {
+                    out[2] = op_rec(blk.ph[1][k] + (uint32_t)(out[alg & 1u] >> 1), blk.att[1][k]);
+                    out[5] = out[1] + out[2];
+                    out[3] = op_rec(blk.ph[2][k] + (uint32_t)(out[(alg >> 1) & 7u] >> 1), blk.att[2][k]);
+                    out[6] = out[1] + out[3];
+                    out[7] = out[2] + out[3];
+                    res = op_rec(blk.ph[3][k] + (uint32_t)(out[(alg >> 4) & 7u] >> 1), blk.att[3][k]) >> 5;
+                    if (alg & 0x080u)
+                        res = clampi(res + (out[1] >> 5), -257, 256);
+                    if (alg & 0x100u)
+                        res = clampi(res + (out[2] >> 5), -257, 256);
+                    if (alg & 0x200u)
+                        res = clampi(res + (out[3] >> 5), -257, 256);
+                }
+            }
+            if (dac_ch)
+                res = (int32_t)(int16_t)(dac[k] << 7) >> 7;  /* the DAC replaces channel 6 */
+            if (mute)
+                res = 0;
+            outs[k][ch] = (int16_t)res;
+            if (c->chip == OPN2_YM2612) {
+                l[k] += ladder((pan & 0x80u) ? res : 0);
+                r[k] += ladder((pan & 0x40u) ? res : 0);
+            } else {
+                l[k] += (pan & 0x80u) ? res : 0;
+                r[k] += (pan & 0x40u) ? res : 0;
+            }
+        }
+        h->fb[0] = (int16_t)fb0;
+        h->fb[1] = (int16_t)fb1;
+        h->fb_in = (int16_t)fb_in;
+        c->out[ch] = (int16_t)res;
+    }
+    c->dac = dac[n - 1];
+    return;
+
+by_sample:
+    for (k = 0; k < n; k++) {
+        c->dac = dac[k];
+        opn2_clock(c, &l[k], &r[k]);
+        for (ch = 0; ch < OPN2_NCH; ch++)
+            outs[k][ch] = c->out[ch];
+    }
+    return;
+by_sample_1:                                                /* the first sample's start is done */
+    c->dac = dac[0];
+    clock_rest(c, &l[0], &r[0]);
+    for (ch = 0; ch < OPN2_NCH; ch++)
+        outs[0][ch] = c->out[ch];
+    for (k = 1; k < n; k++) {
+        c->dac = dac[k];
+        opn2_clock(c, &l[k], &r[k]);
+        for (ch = 0; ch < OPN2_NCH; ch++)
+            outs[k][ch] = c->out[ch];
+    }
 }

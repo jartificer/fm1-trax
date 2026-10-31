@@ -78,6 +78,15 @@ quiet, and that the safety net (below) works and never goes off on a real song. 
 editor's VGM import: damaged and random VGMs must be refused with a message or import into a song the
 engine reads and plays within the clip.
 
+The engine is optimised for the FM-1's time budget, and two tests keep it honest.
+`tests/host/golden_test.c` hashes the engine's output sample by sample (random register logs for each
+chip, the whole mixer, random songs through the player) and compares with `tests/host/golden.txt`, so
+an optimisation must not change a single sample; `golden_test write FILE` records new hashes after an
+intended change to the sound. `tests/cost_check.sh` counts the host instructions a 256-frame block
+takes with valgrind (`tests/host/cost_test.c`: every FM operator sounding with the LFO and SSG-EG, and
+the demo song), built with clang as the FM-1's compiler, and fails when the engine gets more than about
+10% slower. Both run in `tests/run_tests.sh`. The device shows its own load in SETUP (AUDIO LOAD).
+
 Hanging notes are fuzzed at two levels. `fuzz_test` plays the keys (notes on and off on any channel,
 instruments changed meanwhile), lets every key go, and requires the chips to fall silent within 5 s
 (`player_hanging()`: no FM operator keyed, every PSG channel at full attenuation, the DAC stopped).
