@@ -491,6 +491,7 @@ WEB(web_ins_init) void web_ins_init(int i, int type)
 }
 WEB(web_sample_name) const char *web_sample_name(int i) { return i >= 0 && (uint32_t)i < bank_n ? bank[i].name : ""; }
 WEB(web_sample_count) int web_sample_count(void) { return (int)bank_n; }
+WEB(web_guard_trips) uint32_t web_guard_trips(void) { return player_guard_trips; }   /* the safety net (player_render) */
 WEB(web_sample_data) const uint8_t *web_sample_data(int i) { return i >= 0 && (uint32_t)i < bank_n ? bank[i].data : 0; }
 WEB(web_sample_len) uint32_t web_sample_len(int i) { return i >= 0 && (uint32_t)i < bank_n ? bank[i].len : 0; }
 WEB(web_sample_rate) int web_sample_rate(int i) { return i >= 0 && (uint32_t)i < bank_n ? bank[i].rate : 0; }

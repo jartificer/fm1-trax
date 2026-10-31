@@ -6,7 +6,7 @@
 #include "song.h"
 #include "demo_song_data.h"
 
-static int demo_note(const char *s)        /* "A-4" / "C#5" -> 1..96 */
+__attribute__((unused)) static int demo_note(const char *s)        /* "A-4" / "C#5" -> 1..96 */
 {
     static const char *const N = "C-C#D-D#E-F-F#G-G#A-A#B-";
     int i;

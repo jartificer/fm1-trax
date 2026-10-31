@@ -87,7 +87,16 @@ enum {
 };
 int player_post(uint8_t cmd, uint16_t a, uint8_t b, uint8_t c);   /* 0 = queued */
 
-void player_render(int32_t *out, uint32_t n);   /* the audio interrupt: n stereo frames added to out */
+void player_render(int32_t *out, uint32_t n);   /* the audio interrupt: n stereo frames into out (zeroed) */
+/* the safety net in player_render: samples clipped to PLAYER_CLIP; a level over PLAYER_GUARD drops the
+ * block and resets the player and the chips (player_guard_trips counts it) */
+#define PLAYER_CLIP 32767
+#define PLAYER_GUARD 262144
+extern volatile uint32_t player_guard_trips;
+extern volatile int32_t player_raw_peak;   /* the last block's peak before the clip */
+#ifdef OM_HOST
+void player_test_poison(void);
+#endif
 
 /* for exports and tests: run the commands now, play the song to its loop */
 void player_run_commands(void);

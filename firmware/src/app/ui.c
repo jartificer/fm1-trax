@@ -726,7 +726,12 @@ void ui_input_only(void) { input(); }
 
 void ui_frame(void)
 {
+    static uint32_t trips;
     input();
+    if (player_guard_trips != trips) {          /* the sound's safety net went off (player_render) */
+        trips = player_guard_trips;
+        ui_say("SOUND RESET", "SAFETY NET");
+    }
     th = &THEMES[set.theme % NTHEMES];
     if (plat_ms() - ui.drawn_at < FRAME_MS)
         return;

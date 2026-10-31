@@ -369,8 +369,10 @@ static void run_ms(uint32_t ms)
             double t0 = now_ns(), dt;
             memset(blk, 0, sizeof blk);
             player_render(blk, 256);
-            for (k = 0; k < 512; k++)                 /* the master: as the device (main_fm1.c) */
-                blk[k] = blk[k] * (int32_t)master >> 4;
+            for (k = 0; k < 512; k++) {               /* the master: as the device (main_fm1.c) */
+                int32_t v = blk[k] * (int32_t)master >> 4;
+                blk[k] = v > 8388607 ? 8388607 : v < -8388607 ? -8388607 : v;
+            }
 #ifdef OM_WEB
             web_audio(blk, 256);
 #endif

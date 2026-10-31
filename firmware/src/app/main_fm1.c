@@ -41,8 +41,10 @@ static void render_block(int32_t *o)                /* ALNK0: one half, measured
             for (i = 0; i < 2u * REND_FRAMES; i++)
                 b[i] = 0;
             player_render(b, REND_FRAMES);
-            for (i = 0; i < 2u * REND_FRAMES; i++)   /* ~16 bits of chips to 24, times the MASTER */
-                b[i] = b[i] * g >> 4;
+            for (i = 0; i < 2u * REND_FRAMES; i++) { /* 16 bits of chips (clipped) to 24, times the MASTER */
+                int32_t v = b[i] * g >> 4;
+                b[i] = v > 8388607 ? 8388607 : v < -8388607 ? -8388607 : v;   /* never wraps */
+            }
 #if FELUCCA_UAC
             uac_tap(o + 2u * k, REND_FRAMES);       /* the USB audio input: the same master output */
 #endif

@@ -70,6 +70,14 @@ repository, so the site needs no build step to serve:
 - `web/fm1drive.fwsc`: the device package, copied from `build/fm1drive.fwsc` after `./build.sh`. Update
   `web/build.txt` with the commit it was built from.
 
+`tests/host/fuzz_test.c` fuzzes the sound path for loud-noise bugs: random songs with every effect and
+instrument setting, live commands (play, stop, the keys, mute, reset, edits) between the blocks, and
+damaged song files, checking that no block reaches the device's output range unclipped, that a stop goes
+quiet, and that the safety net (below) works and never goes off on a real song. `tests/run_tests.sh` runs
+300 seeds (`FUZZ_SEEDS`), and 60 more under ASan/UBSan. `tests/web_fuzz_test.mjs` does the same for the
+editor's VGM import: damaged and random VGMs must be refused with a message or import into a song the
+engine reads and plays within the clip.
+
 `tests/web_install_test.mjs` tests the installer against a simulated FM-1, and
 `tests/web_editor_test.mjs` the editor's engine (songs edited in place, played, exported as VGM) and its
 link against a second copy of the module running as the FM-1. `tests/run_tests.sh` runs both (Node 18 or

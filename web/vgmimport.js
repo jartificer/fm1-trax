@@ -482,7 +482,13 @@ function mapDrums(list, kit, forced, note) {
 export function importVgm(bytes, opt = {}) {
     const notes = [];
     const note = s => notes.push(s);
-    const vgm = readVgm(bytes);
+    let vgm;
+    try {
+        vgm = readVgm(bytes);
+    } catch (err) {
+        if (err instanceof RangeError) throw new Error("a damaged VGM: it ends too soon");
+        throw err;
+    }
     const kit = opt.kit || [];
     const smp = samples(vgm);                          // before the replay, which reads which sample each event plays
     Object.assign(vgm, measureTick(vgm));
@@ -497,8 +503,11 @@ export function importVgm(bytes, opt = {}) {
     for (let t = g.off, r = 0; t < fr.n; t += r % 2 ? g.s1 : g.s0, r++) rowTick.push(t);
     if (rowTick.length % 2) rowTick.pop();
     let nrows = Math.min(rowTick.length, MAX_ORD * MAX_ROWS);
+    if (nrows < 2) throw Object.assign(new Error("nothing plays in this VGM: no notes on the YM2612 or the PSG"), {notes});
     const ticks = rowTick.slice(0, nrows).map((t, k) => k % 2 ? g.s1 : g.s0);
     const endTick = rowTick[nrows - 1] + ticks[nrows - 1];
+    while (F.length < endTick)                         // the last row may run past the log's end: quiet ticks
+        F.push({...F[F.length - 1], on: [0, 0, 0, 0, 0, 0], off: [0, 0, 0, 0, 0, 0], dac: null, restart: [0, 0, 0, 0]});
     const rowOf = f => {
         let lo = 0, hi = nrows - 1;
         while (lo < hi) { const m = lo + hi + 1 >> 1; if (rowTick[m] <= f) lo = m; else hi = m - 1; }
@@ -515,7 +524,7 @@ export function importVgm(bytes, opt = {}) {
     const insKey = new Map();
     const instrument = (key, make) => {
         if (!insKey.has(key)) {
-            if (song.ins.length >= MAX_INS) throw new Error("more than 256 instruments");
+            if (song.ins.length >= MAX_INS - 1) throw new Error("more than 255 instruments");   // 255 is "none" in a cell
             insKey.set(key, song.ins.length);
             song.ins.push(make(song.ins.length));
         }
