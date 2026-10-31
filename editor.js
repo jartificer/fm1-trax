@@ -5,6 +5,7 @@
 // Files go through the module too: .fm1d songs (song_write / song_read), .fm1i instruments, VGM.
 // The FM-1 (or the emulator in another tab) is reached through fm1link.js.
 import {SongLink, findDevice, findEmulator, MEMORY, BANK, BANKS, SLOTS, LinkError} from "./fm1link.js";
+import {importVgm} from "./vgmimport.js";
 
 const $ = id => document.getElementById(id);
 const RATE = 44100, AHEAD = 3072;
@@ -991,11 +992,55 @@ $("f-song").addEventListener("change", async e => {
     const f = e.target.files[0];
     e.target.value = "";
     if (!f) return;
+    const b = new Uint8Array(await f.arrayBuffer());
+    if (isVgm(b)) return importFile(f.name, b);
     change();
     stop();
-    const rc = loadBytes(new Uint8Array(await f.arrayBuffer()));
+    const rc = loadBytes(b);
     afterLoad(rc ? `${f.name}: not an FM1-DRIVE song (a new one instead)` : f.name, !!rc);
 });
+$("b-import").onclick = () => $("f-vgm").click();
+$("f-vgm").addEventListener("change", async e => {
+    const f = e.target.files[0];
+    e.target.value = "";
+    if (f) importFile(f.name, new Uint8Array(await f.arrayBuffer()));
+});
+
+// a Mega Drive VGM as a song (web/vgmimport.js), the DAC kit from the engine
+const isVgm = b => (b[0] === 0x1F && b[1] === 0x8B) || String.fromCharCode(...b.subarray(0, 4)) === "Vgm ";
+let kit = null;
+const theKit = () => kit ||= Array.from({length: x.web_sample_count()}, (_, i) => ({
+    name: cstr(x.web_sample_name(i)),
+    data: new Uint8Array(x.memory.buffer, x.web_sample_data(i), x.web_sample_len(i)).slice(),
+    rate: x.web_sample_rate(i),
+}));
+async function importFile(name, b) {
+    stop();
+    say(`importing ${name}…`);
+    await new Promise(r => setTimeout(r, 30));
+    let r;
+    try {
+        if (b[0] === 0x1F && b[1] === 0x8B)
+            b = new Uint8Array(await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+        r = importVgm(b, {kit: theKit(), name: name.replace(/\.vg[mz]$/i, "")});
+    } catch (err) {
+        return say(`${name}: ${err.message}`, true);
+    }
+    change();
+    if (loadBytes(r.song)) {                       // the engine refused it: a converter bug
+        x.web_song_new();
+        return afterLoad(`${name}: the import did not read back (a new song instead)`, true);
+    }
+    const i = r.info;
+    afterLoad(`${name}: imported, ${i.orders} positions, ${i.instruments} instruments`);
+    $("imp-sum").textContent = `"${i.title}"${i.author ? ` by ${i.author}` : ""}: ${Math.floor(i.seconds / 60)}:${String(Math.round(i.seconds % 60)).padStart(2, "0")}` +
+        `${i.loop ? ", looping" : ""}, ${i.orders} order positions of ${i.rows} rows, ${i.instruments} instruments.`;
+    const m = Object.entries(i.match);
+    $("imp-match").innerHTML = m.length ? "<tr><td>Pitch match</td><td>" +
+        m.map(([c, v]) => `${esc(c)} ${Math.round(v * 100)}%`).join(" · ") + "</td></tr>" : "";
+    $("imp-notes").innerHTML = r.notes.map(s => `<li>${esc(s)}</li>`).join("");
+    $("imp").showModal();
+}
 $("b-save").onclick = () => { download(new Blob([snapshot()]), `${songName()}.fm1d`); ui.dirty = false; };
 $("b-vgm").onclick = () => {
     stop();
@@ -1218,9 +1263,13 @@ function lcd() {
     if (p && ui.sub >= 5) { const f = m[p + (ui.sub <= 8 ? 3 : 4)]; fx = f ? cstr(x.web_fx_name(f)) || "not an effect" : ""; }
     $("lcd").innerHTML = `${playing ? "▶" : "■"} <b>${hex2(pos >>> 16)}:${hex2(pos & 0xFFFF)}</b> · ${chName(ch)} pat <b>${hex2(curPat())}</b> · oct <b>${ui.oct}</b> · ins <b>${hex2(ui.ins)}</b>${fx ? ` · <b>${esc(fx)}</b>` : ""}`;
 }
-let lastPlay = 0;
+let lastPlay = 0, trips = 0;
 function frame() {
     if (x) {
+        if (x.web_guard_trips() !== trips) {          // the sound's safety net went off (player_render)
+            trips = x.web_guard_trips();
+            say("the sound was reset by its safety net (a level no song reaches)", true);
+        }
         const playing = x.web_playing();
         if (playing && ui.follow) {
             const pos = x.web_pos();
