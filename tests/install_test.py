@@ -318,7 +318,7 @@ def built_package():
         print("built package: skipped (no build/fm1trax.fwsc)")
         return
     raw = clean.read_bytes()
-    ok(I.product_of(raw).startswith("FM-1_7"), f"{clean.name} identity {I.product_of(raw)} (FM-1_7...)")
+    ok(I.product_of(raw).startswith("FM-1_601"), f"{clean.name} identity {I.product_of(raw)} (FM-1_601...)")
     ok(len(I.logical_image(raw)) > 0, f"{clean.name} has a logical image")
     ok(I.LOADER_MARK in raw, f"{clean.name} carries the Felucca loader marker")
 

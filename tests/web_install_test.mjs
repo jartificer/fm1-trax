@@ -207,7 +207,7 @@ async function attempt(dev, pkg) {
 
 if (existsSync("web/fm1trax.fwsc")) {
     const pkg = await I.loadPackage(readFileSync("web/fm1trax.fwsc"));
-    ok(pkg.product.startsWith("FM-1_7") && pkg.loader, `web/fm1trax.fwsc: ${pkg.product}, with the Felucca loader`);
+    ok(pkg.product.startsWith("FM-1_601") && pkg.loader, `web/fm1trax.fwsc: ${pkg.product}, with the Felucca loader`);
     const dev = new FakeFM1(pkg.image, {afterWrite: pkg.product}), r = await attempt(dev, pkg);
     ok(r.code === 0 && dev.bad === 0, "web/fm1trax.fwsc: installs on the simulated FM-1");
 } else console.log("web/fm1trax.fwsc: skipped (not there)");
