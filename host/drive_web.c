@@ -406,6 +406,16 @@ WEB(web_cell) cell_t *web_cell(int ch, int pat, int row, int alloc)
         return 0;
     return alloc ? song_cell_w(&song, ch, pat, row) : song_cell(&song, ch, pat, row);
 }
+/* the channel the keys play instrument ins on with the cursor on ch, and whether it is a noise one:
+ * the device's rule (song_ins_ch) */
+WEB(web_ins_ch) int web_ins_ch(int ins, int ch)
+{
+    return ins >= 0 && ins < MAX_INS ? song_ins_ch(&song, &song.ins[ins], ins, ch) : ch;
+}
+WEB(web_ins_noise) int web_ins_noise(int ins)
+{
+    return ins >= 0 && ins < MAX_INS && song_ins_noise(&song, &song.ins[ins], ins);
+}
 WEB(web_pat_empty) int web_pat_empty(int ch, int pat) { return song_pat_empty(&song, ch, pat); }
 WEB(web_set_rows) int web_set_rows(int rows) { return song_set_rows(&song, rows); }
 WEB(web_compact) void web_compact(void) { song_compact(&song); }

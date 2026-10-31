@@ -1,0 +1,36 @@
+# every instrument of the demo song (Sunset Beach, imported from a VGM) plays from the keys on a
+# channel of its kind from every column: its NOISE ones (1E-25, PSG instruments without a noise
+# macro that the song uses only on NOI, the mode set by 20xy) on NOI, not as a tone on SQ1
+wait 300
+tap HOME
+expect view 0
+expect misrouted 0
+expect ch 0
+expect insch30 9
+expect insch37 9
+# on SQ1 too
+turn ALGO 6
+expect ch 6
+expect insch30 9
+# from the keys: NOISE E (1E) on NOI
+turn PRESET 30
+expect ins 30
+key 0 down
+wait 30
+expect jamch 9
+key 0 up
+wait 800
+expect hanging 0
+# in edit mode it is not written into SQ1
+tap REC
+tapkey 0
+tap REC
+expect dirty 0
+# on NOI it is written
+turn ALGO 3
+expect ch 9
+tap REC
+tapkey 0
+tap REC
+expect dirty 1
+expect hanging 0

@@ -100,6 +100,47 @@ const cell_t *song_cell_ro(const song_t *s, int ch, int pat, int row)
 
 cell_t *song_cell(song_t *s, int ch, int pat, int row) { return (cell_t *)song_cell_ro(s, ch, pat, row); }
 
+/* where the song uses instrument ins: bit 0 on SQ1-SQ3, bit 1 on NOI */
+static int ins_use(const song_t *s, int ins)
+{
+    int ch, p, r, u = 0;
+    for (ch = CH_SQ1; ch <= CH_NOI; ch++)
+        for (p = 0; p < MAX_PAT; p++) {
+            const cell_t *c;
+            if (s->pat[ch][p] == PAT_NONE)
+                continue;
+            c = &s->pool[s->pat[ch][p]];
+            for (r = 0; r < s->rows; r++)
+                if (c[r].ins == ins) {
+                    u |= ch == CH_NOI ? 2 : 1;
+                    break;
+                }
+        }
+    return u;
+}
+
+int song_ins_noise(const song_t *s, const ins_t *in, int ins)
+{
+    if (in->type != INS_PSG)
+        return 0;
+    if (in->mac[MAC_NOISE].len)
+        return 1;
+    return s && ins >= 0 && ins < MAX_INS && ins_use(s, ins) == 2;
+}
+
+int song_ins_ch(const song_t *s, const ins_t *in, int ins, int ch)
+{
+    switch (in->type) {
+    case INS_DAC: return CH_FM6;
+    case INS_PSG:
+        if (song_ins_noise(s, in, ins))
+            return CH_NOI;
+        return ch >= CH_SQ1 && ch < CH_NOI ? ch : CH_SQ1;
+    case INS_FM: return ch_is_fm(ch) ? ch : CH_FM1;
+    default: return ch;
+    }
+}
+
 static void cells_clear(cell_t *c, uint32_t n)
 {
     while (n--) {

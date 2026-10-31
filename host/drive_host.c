@@ -582,6 +582,27 @@ static int expect(const char *what, const char *val)
         for (c = 0; c < NCH && got < 0; c++)
             if (player.ch[c].jam)
                 got = c;
+    } else if (!strncmp(what, "insch", 5))        /* inschI: the channel the keys play instrument I on now */
+        got = song_ins_ch(&song, &song.ins[atoi(what + 5)], atoi(what + 5), ch_at(ui.ch));
+    else if (!strcmp(what, "misrouted")) {         /* the song's instruments the keys would play on a
+                                                       channel of the wrong kind, from every column */
+        int i, c;
+        got = 0;
+        for (i = 0; i < MAX_INS; i++)
+            for (c = 0; c < NCH_STD; c++) {
+                const ins_t *in = &song.ins[i];
+                int to = song_ins_ch(&song, in, i, c), noise = !strncmp(in->name, "NOISE", 5);
+                if (in->type == INS_EMPTY)
+                    continue;
+                if (in->type == INS_DAC ? to != CH_FM6
+                    : in->type == INS_FM ? !ch_is_fm(to)
+                    : noise ? to != CH_NOI
+                            : to < CH_SQ1 || to > CH_NOI || (to == CH_NOI && !song_ins_noise(&song, in, i))) {
+                    if (got < 8)
+                        printf("     misrouted: %02X %s from %d to %d\n", i, in->name, c, to);
+                    got++;
+                }
+            }
     } else if (!strcmp(what, "dacon"))              /* FM6 playing a sample */
         got = player.md.dac.on;
     else if (!strcmp(what, "keyed")) {              /* FM1-FM5 and FM3's operators keyed on now */
