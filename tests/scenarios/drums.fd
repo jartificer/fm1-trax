@@ -1,0 +1,50 @@
+# a drum picked with PRESETS plays as a drum from the keys wherever the cursor is: on FM6 (the DAC),
+# never as a tone on the cursor's FM channel; in edit mode it is not written into a column it cannot
+# play in. A new song: instruments 0C-0F are the DAC kit, 08-0B PSG, 00-07 FM.
+wait 300
+tap HOME
+tap GLO
+turn SELECT 1
+tap ENV
+expect view 0
+expect ch 0
+# instrument 0C, an 808 kick, on FM1's column
+turn PRESET 12
+expect ins 12
+expect instype12 3
+key 0 down
+wait 30
+expect jamch 5
+expect dacon 1
+expect keyed 0
+peakreset
+wait 60
+expect peak_db_min -40
+key 0 up
+wait 800
+expect jams 0
+expect hanging 0
+# edit mode: the drum is not written into FM1, the cursor stays
+tap REC
+tapkey 0
+tap REC
+expect note0.0 0
+expect row 0
+# a PSG instrument (08) from FM1's column plays on a PSG channel, not as a stale FM tone
+turn PRESET -4
+expect ins 8
+key 0 down
+wait 50
+expect jamch 6
+expect keyed 0
+key 0 up
+wait 800
+expect hanging 0
+# an FM instrument still plays on the cursor's channel and is written there
+turn PRESET -8
+expect ins 0
+tap REC
+tapkey 0
+tap REC
+expect note0.0 42
+expect hanging 0

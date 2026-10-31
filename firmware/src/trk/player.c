@@ -379,10 +379,17 @@ static void note_on(int ch, uint8_t note)
     if (ch_is_fm(ch)) {
         if (ch == CH_FM6)
             dac_enable(0);
-        if (in->type == INS_FM && cur_ins[ch] != c->ins)
-            fm_load(ch, c->ins);
         if (c->key)
             fm_key(ch, 0);
+        if (in->type != INS_FM) {
+            /* a drum, a PSG or an empty instrument has no FM patch: the channel stays silent
+             * rather than keying on whatever patch it had before */
+            keyon_mask &= ~(1u << ch);
+            c->key = 0;
+            return;
+        }
+        if (cur_ins[ch] != c->ins)
+            fm_load(ch, c->ins);
         keyon_mask |= 1u << ch;
     } else if (ch == CH_NOI && in->mac[MAC_NOISE].len == 0) {
         noise_mode(c->noise);          /* a new note restarts the noise, as a driver writing its mode */

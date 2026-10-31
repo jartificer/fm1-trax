@@ -576,6 +576,19 @@ static int expect(const char *what, const char *val)
         got = 0;
         for (c = 0; c < NCH; c++)
             got += player.ch[c].jam != 0;
+    } else if (!strcmp(what, "jamch")) {            /* the channel the keys play (-1: none) */
+        int c;
+        got = -1;
+        for (c = 0; c < NCH && got < 0; c++)
+            if (player.ch[c].jam)
+                got = c;
+    } else if (!strcmp(what, "dacon"))              /* FM6 playing a sample */
+        got = player.md.dac.on;
+    else if (!strcmp(what, "keyed")) {              /* FM1-FM5 and FM3's operators keyed on now */
+        int c;
+        got = 0;
+        for (c = 0; c < NCH; c++)
+            got += ch_is_fm(c) && c != CH_FM6 && player.ch[c].key;
     } else if (!strcmp(what, "hanging"))            /* what sounds with no key down (the song stopped) */
         got = player.playing ? 0 : (int)player_hanging();
     else if (!strcmp(what, "level")) {              /* the loudest channel's level now */

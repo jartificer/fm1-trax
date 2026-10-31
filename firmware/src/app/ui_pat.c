@@ -13,6 +13,29 @@
 
 static int cur_ch(void) { return ch_at(ui.ch); }
 
+/* the channel the keys play an instrument on: the cursor's, if the instrument can sound there, or
+ * else one that can (the DAC kit only plays on FM6, FM patches on the FM channels, PSG instruments on
+ * the PSG ones), so a drum picked with PRESETS sounds as a drum wherever the cursor is */
+static int ins_ch(int ins)
+{
+    const ins_t *in = &song.ins[ins];
+    int ch = cur_ch();
+    switch (in->type) {
+    case INS_DAC: return CH_FM6;
+    case INS_PSG: return ch_is_psg(ch) ? ch : in->mac[MAC_NOISE].len ? CH_NOI : CH_SQ1;
+    case INS_FM: return ch_is_fm(ch) ? ch : CH_FM1;
+    default: return ch;
+    }
+}
+
+/* why a note from the keys was not written: the instrument cannot play on the cursor's channel */
+static void ins_ch_say(int ins)
+{
+    int t = song.ins[ins].type;
+    ui_say(t == INS_DAC ? "DRUMS PLAY ON FM6" : t == INS_PSG ? "PSG PLAYS ON SQ1-NOI" : "FM PLAYS ON FM1-FM6",
+           "NOT WRITTEN HERE");
+}
+
 /* the clipboard: a block of cells */
 static struct {
     int rows, cols;
@@ -142,10 +165,14 @@ static void blk_transpose(int d)
 static void pat_key(int note)
 {
     int ch = cur_ch(), ins = ui.ins;
-    jam_on(ch, note, ins);
+    jam_on(ins_ch(ins), note, ins);
     ui.last_note = (uint8_t)note;
     if (!ui.edit)
         return;
+    if (ins_ch(ins) != ch) {                   /* it would not sound in this column */
+        ins_ch_say(ins);
+        return;
+    }
     if (player.playing) {                      /* live: quantised to the nearest row */
         int o = player.ord, r = player.row;
         uint32_t sp = player.speed[player.speed_i & 1u];
