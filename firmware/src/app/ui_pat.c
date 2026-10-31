@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the pattern view (HOME), included by ui.c.
+/* FM1-TRAX: the pattern view (HOME), included by ui.c.
  *
  * Six channels fit across: the cursor's channel shows its whole cell (note, instrument, volume, two
  * effects), the five around it their notes, so the "lens" moves with ALGORITHM. Fourteen rows, the

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: plat.h's storage over storage.c, while flash_ok (the flash answered at boot). Included by
+/* FM1-TRAX: plat.h's storage over storage.c, while flash_ok (the flash answered at boot). Included by
  * plat_fm1.c and by the host simulator, after storage.c. */
 int plat_store_load(uint32_t obj, void *dst, uint32_t max) { return flash_ok ? st_load(obj, dst, max) : -1; }
 int plat_store_save(uint32_t obj, const void *src, uint32_t len) { return flash_ok ? st_save(obj, src, len) : -9; }

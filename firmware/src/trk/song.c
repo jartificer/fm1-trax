@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the song (song.h): patterns in the row pool, the defaults, the byte stream. */
+/* FM1-TRAX: the song (song.h): patterns in the row pool, the defaults, the byte stream. */
 #include "song.h"
 #include "presets.h"
 

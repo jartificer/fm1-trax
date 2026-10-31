@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// FM1-DRIVE: a Mega Drive VGM (YM2612 + SN76489 register log) turned back into a song for the
+// FM1-TRAX: a Mega Drive VGM (YM2612 + SN76489 register log) turned back into a song for the
 // tracker: the .fm1d byte stream song_read reads (firmware/src/trk/song.c). The editor imports VGMs
 // with it, and tools/vgm2fm1d.mjs makes the demo song with it.
 //
@@ -12,7 +12,7 @@
 //
 // How: the log is replayed tick by tick (a frame: 1/60 s, or the VGM's rate). The row grid comes
 // from the notes' start ticks: one speed, or two alternating (swing). Then each channel is rebuilt
-// row by row by analysis through synthesis: the cells are chosen so that FM1-DRIVE's driver, modelled
+// row by row by analysis through synthesis: the cells are chosen so that FM1-TRAX's driver, modelled
 // here tick for tick (player.c), plays the notes, pitches and levels of the log.
 //   FM    key-ons are notes; the patch at a key-on is the instrument, its carriers' level taken out
 //         as the volume column (one patch at several volumes is one instrument); key-offs are note
@@ -22,7 +22,7 @@
 //         and where it falls silent a note off; a new pitch without a restart a legato note (03xx);
 //         the noise mode 20xy.
 //   DAC   each sample start is a note on FM6 of a DAC instrument, the sample the kit drum most like
-//         it (FM1-DRIVE plays its own kit, not the VGM's samples).
+//         it (FM1-TRAX plays its own kit, not the VGM's samples).
 // The patterns are cut from the rows with the repeats shared, and the VGM's loop point is the
 // song's. Logs made by a tracker convert closely; a game's sound driver, with its own timing,
 // approximately. FM3's special mode (four pitches) is played as one.
@@ -247,7 +247,7 @@ function findGrid(fr) {
 }
 const cmp = (a, b) => { for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return a[k] > b[k] ? 1 : -1; return 0; };
 
-// ------------------------------------------- FM1-DRIVE's driver, modelled ---
+// ------------------------------------------- FM1-TRAX's driver, modelled ---
 // one channel of player.c: the pitch (and, on the PSG, the attenuation) each tick
 class Chan {
     constructor(psg) {

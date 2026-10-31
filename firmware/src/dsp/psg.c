@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: SN76489 (psg.h). Behaviour as documented by SMS Power! ("SN76489 notes", Maxim) for
+/* FM1-TRAX: SN76489 (psg.h). Behaviour as documented by SMS Power! ("SN76489 notes", Maxim) for
  * the Sega VDP's PSG. */
 #include "psg.h"
 #include "dsp_hot.h"

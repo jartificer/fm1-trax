@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE app: the settings (one flash object), the song slots and the instrument library (objects
+/* FM1-TRAX app: the settings (one flash object), the song slots and the instrument library (objects
  * in the chunk store), and the app's entry points. Included by the unity build after gfx.c (drawing
  * helpers in scope) and by the host simulator. */
 #pragma once

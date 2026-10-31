@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the 128 FM presets, written for this project in the style of the console's sound
+/* FM1-TRAX: the 128 FM presets, written for this project in the style of the console's sound
  * (none is taken from a game). 16 groups of 8.
  *
  *   O(ar, d1r, d2r, rr, sl, tl, ks, mul, dt)    an operator; OA: with LFO AM; OS: with SSG-EG mode

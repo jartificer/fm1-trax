@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE firmware for the M-VAVE FM-1: one compilation unit for the platform and the app
+/* FM1-TRAX firmware for the M-VAVE FM-1: one compilation unit for the platform and the app
  * (FM1-GM's layout, Felucca's: the HAL is header-only, so everything that touches it is here).
  * The chips and the tracker (dsp/, trk/) are separate units compiled at -O2 by tools/build.py; this
  * one is -Os. Order matters. The OM_ build flags and names are FoMni's, kept. */

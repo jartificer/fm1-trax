@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the PSG presets, the DAC kit, a new song's instruments (presets.h). */
+/* FM1-TRAX: the PSG presets, the DAC kit, a new song's instruments (presets.h). */
 #include "presets.h"
 #include "player.h"
 #include "song.h"

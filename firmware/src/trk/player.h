@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the sound driver. It plays the song (song.h) on the Mega Drive's chips (mdsnd.h) as a
+/* FM1-TRAX: the sound driver. It plays the song (song.h) on the Mega Drive's chips (mdsnd.h) as a
  * Z80 / 68000 driver would: once a tick (the frame: 60 Hz NTSC, 50 Hz PAL, or the song's rate) it
  * reads the rows, runs the effects and the instruments' macros, and writes the chips' registers.
  *

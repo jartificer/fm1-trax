@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
-"""Build FM1-DRIVE (built on Felucca, as FM1-GM, X0X and OMNI are): the app, the update loader and an installable .fwsc package.
+"""Build FM1-TRAX (built on Felucca, as FM1-GM, X0X and OMNI are): the app, the update loader and an installable .fwsc package.
 
   tools/build.py [--release X.Y[-suffix]]
 
-Outputs in build/: fm1drive.bin (app), loader/ota.bin (update loader, Felucca's, unchanged),
-fm1drive.fwsc (package). See BUILDING.md for the toolchain and the SDK.
+Outputs in build/: fm1trax.bin (app), loader/ota.bin (update loader, Felucca's, unchanged),
+fm1trax.fwsc (package). See BUILDING.md for the toolchain and the SDK.
 
 The JieLi toolchain is Linux x86-64 only. JIELI_TOOLCHAIN points at it; on
 macOS (or with JIELI_DOCKER=1) each tool runs in a linux/amd64 container.
@@ -239,7 +239,7 @@ def build_app():
         units.append(("cc", *o2, "-c", FW / "src" / u, "-o", o))
         objs.append(o)
     tc_all(*units)
-    elf = OUT / "fm1drive.elf"
+    elf = OUT / "fm1trax.elf"
     # unreferenced functions (each in its own section: -ffunction-sections) are dropped: the DSP keeps
     # mono reference paths for the host tests that the firmware no longer calls
     tc("pi32v2/bin/ld", "--gc-sections", "-e", "_start", "-T", FW / "app.ld", *objs, "-o", elf)
@@ -251,7 +251,7 @@ def build_app():
                                ("common/bin/objdump", "-t", elf),
                                ("common/bin/objdump", "-d", elf),
                                ("common/bin/objdump", "-d", "-j", ".ram_text", elf))
-    (OUT / "fm1drive.dis").write_text(dis)
+    (OUT / "fm1trax.dis").write_text(dis)
 
     def symv(name):
         return int(re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M).group(1), 16)
@@ -268,7 +268,7 @@ def build_app():
             img += b"\xff" * (load - APP_XIP - len(img))
             img += blob
     img += b"\xff" * (-len(img) % 4)
-    (OUT / "fm1drive.bin").write_bytes(img)
+    (OUT / "fm1trax.bin").write_bytes(img)
     return bytes(img), syms, dis, rt
 
 
@@ -370,7 +370,7 @@ def main():
     ap.add_argument("--release", metavar="X.Y[.Z]", help="release build: identity FM-1_7XXYYZZ, version string X.Y[.Z]")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
-    name = "fm1drive.fwsc"
+    name = "fm1trax.fwsc"
     if a.release:
         # identity FM-1_7 + major, minor, patch as two digits each (0.1 -> FM-1_7000100): FM-1 is the
         # model the update tools match on; the number is ours (FM1-GM is FM-1_6..., OMNI FM-1_8..., X0X FM-1_9...). Digits only after the
@@ -380,7 +380,7 @@ def main():
             raise SystemExit(f"--release {a.release}: use X.Y[.Z][-suffix], up to two digits each")
         PRODUCT = "FM-1_7%02d%02d%02d" % (int(m[1]), int(m[2]), int(m[3] or 0))
         VERSION = a.release.upper() if "BETA" in a.release.upper() else a.release.upper() + " BETA"
-        name = f"fm1drive-{a.release}.fwsc"
+        name = f"fm1trax-{a.release}.fwsc"
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
         if hashlib.sha256(fm1pkg_make.sdk_file(rel)).hexdigest() != sha:
@@ -405,7 +405,7 @@ def main():
         raise SystemExit("build: checks failed")
     pkg = fm1pkg_make.ufw(fm1pkg_make.flash_image(img, fm1pkg_make.KEY), ota, PRODUCT)
     (OUT / name).write_bytes(pkg)
-    print(f"app      {OUT / 'fm1drive.bin'}  {len(img)} B")
+    print(f"app      {OUT / 'fm1trax.bin'}  {len(img)} B")
     print(f"loader   {LDR / 'ota.bin'}  {len(ota)} B")
     print(f"package  {OUT / name}  {len(pkg)} B, identity {PRODUCT}, rev {REV or 'none'}")
     return 0

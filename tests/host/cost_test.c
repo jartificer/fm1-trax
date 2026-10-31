@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the sound engine's cost, for the time budget (tests/cost_check.sh counts the host
+/* FM1-TRAX: the sound engine's cost, for the time budget (tests/cost_check.sh counts the host
  * instructions with valgrind). The FM-1 renders 256 frames in an interrupt every 5.8 ms, and the
  * screen gets what is left: a block that takes longer is heard as a stuck buffer.
  *

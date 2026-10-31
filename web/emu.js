@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The FM-1 emulator: web/fm1drive.wasm (the firmware's app, chips and tracker, host/drive_web.c) run
+// The FM-1 emulator: web/fm1trax.wasm (the firmware's app, chips and tracker, host/drive_web.c) run
 // against the panel on the page. The device's time follows the audio: whenever the audio worklet has
 // played a block, the device runs on until about 70 ms of sound is queued again. Without sound (before
 // the first click) it follows the clock. The flash (songs, settings) is kept in IndexedDB.
@@ -11,7 +11,7 @@ const RATE = 44100, AHEAD = 3072;              // frames queued ahead of the spe
 const TAP = 40;                                // ms: the shortest press the device sees
 
 // ------------------------------------------------------------ the flash ---
-const DB = "fm1drive-emulator", STORE = "flash";
+const DB = "fm1drive-emulator", STORE = "flash";   // the old name kept: the saved flash survives the rename
 function idb(mode, fn) {
     return new Promise((res, rej) => {
         let req;
@@ -50,7 +50,7 @@ export class Emulator {
         this.sxq = [];                               // SysEx waiting for the device (one at a time)
     }
 
-    async load(url = "fm1drive.wasm") {
+    async load(url = "fm1trax.wasm") {
         const bytes = await (await fetch(url)).arrayBuffer();
         const {instance} = await WebAssembly.instantiate(bytes, {});
         this.x = instance.exports;

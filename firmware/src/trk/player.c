@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the sound driver (player.h). */
+/* FM1-TRAX: the sound driver (player.h). */
 #include "player.h"
 
 player_t player;

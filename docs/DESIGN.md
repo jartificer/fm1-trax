@@ -1,4 +1,4 @@
-# FM1-DRIVE design
+# FM1-TRAX design
 
 A Mega Drive / Genesis sound tracker that runs on the M-VAVE FM-1. It plays and writes music for the
 console's two sound chips, the Yamaha **YM2612** (OPN2) and the TI **SN76489** PSG built into the VDP,
@@ -9,7 +9,7 @@ Status: stages 1–4 are written, tested in the host simulator, and tested on a 
 
 ## 1. Platform
 
-FM1-DRIVE is built on [FM1-GM](https://github.com/jartificer/fm1-gm)'s platform (itself Felucca, X0X and
+FM1-TRAX is built on [FM1-GM](https://github.com/jartificer/fm1-gm)'s platform (itself Felucca, X0X and
 FoMni's): the hardware layer, the update loader, the flash store, the USB stack, the installer, the
 host simulator and the WebAssembly build of the whole app. Those parts are proven on the device and
 are taken over unchanged where possible. Everything above them is new: the chip emulation, the
@@ -319,7 +319,7 @@ A static site, kept private until the repository is public (Pages is not enabled
 
 - **Emulator**: the firmware's app compiled to WebAssembly (as FM1-GM's), with the FM-1's panel; songs
   saved in the browser.
-- **Installer**: installs the firmware over Web MIDI (FM1-GM's installer, with FM1-DRIVE's package).
+- **Installer**: installs the firmware over Web MIDI (FM1-GM's installer, with FM1-TRAX's package).
 - **Editor**: a full desktop tracker on the same engine (the same `.wasm`), with a computer-keyboard
   layout like Deflemask / Furnace: patterns, orders, instruments, the library; open and save `.fm1d`;
   read and write the FM-1's songs and library over USB; **export `.vgm`** (VGM 1.71, YM2612 + SN76489,

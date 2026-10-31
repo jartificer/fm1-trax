@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the songs and the library over USB-MIDI SysEx, for the web editor (FM1-GM's link.c,
+/* FM1-TRAX: the songs and the library over USB-MIDI SysEx, for the web editor (FM1-GM's link.c,
  * reworked). Part of the unity build after ui.c; the web emulator and the simulator include it too.
  * The includer supplies:
  *   link_rx(&p, &n)   the SysEx received and not yet taken (the bytes between F0 and F7): 1, else 0

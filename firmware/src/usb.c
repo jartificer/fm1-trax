@@ -214,7 +214,7 @@ static const uint8_t STR1[] = {22, 3, 'j', 0, 'a', 0, 'r', 0, 't', 0, 'i', 0, 'f
 static const uint8_t STR2[] = {30, 3, 'F', 0, 'e', 0, 'l', 0, 'u', 0, 'c', 0, 'c', 0, 'a', 0, ' ', 0, 'U', 0, 'p', 0,
                                'd', 0, 'a', 0, 't', 0, 'e', 0};
 #else
-static const uint8_t STR2[] = {20, 3, 'F', 0, 'M', 0, '1', 0, '-', 0, 'D', 0, 'R', 0, 'I', 0, 'V', 0, 'E', 0};   /* FM1-DRIVE */
+static const uint8_t STR2[] = {18, 3, 'F', 0, 'M', 0, '1', 0, '-', 0, 'T', 0, 'R', 0, 'A', 0, 'X', 0};   /* FM1-TRAX (the installers find the port by fm-?1) */
 #endif
 
 static int get_desc(uint32_t wvalue, const uint8_t **d, uint16_t *l)

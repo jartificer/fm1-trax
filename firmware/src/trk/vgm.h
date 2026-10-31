@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the song as a .vgm file (VGM 1.71: YM2612 + SN76489 register writes at 44.1 kHz,
+/* FM1-TRAX: the song as a .vgm file (VGM 1.71: YM2612 + SN76489 register writes at 44.1 kHz,
  * with the loop and a GD3 tag), the format every Mega Drive music player reads.
  *
  * The song is played from the top to its loop with every register write logged (mdsnd.h's log

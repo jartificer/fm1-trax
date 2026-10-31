@@ -14,7 +14,7 @@ typedef struct {               /* proportional, see tools/gen_font.py */
 } felucca_font_t;
 #include "felucca_font.h"
 
-/* FM1-DRIVE: two canvases of a third of the screen each, used in turn, so that one is drawn while
+/* FM1-TRAX: two canvases of a third of the screen each, used in turn, so that one is drawn while
  * the other is still being sent (lcd_blit waits for the transfer before, never for this one) */
 #define CV_MAX (240u * 80u)
 static uint16_t cv_buf[2][CV_MAX] __attribute__((section(".pool")));

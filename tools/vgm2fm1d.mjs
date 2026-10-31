@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// A Mega Drive VGM (or .vgz) to an FM1-DRIVE song, from the command line: web/vgmimport.js, the
-// converter the editor's Import VGM runs, with the DAC kit from web/fm1drive.wasm (host/build_web.sh).
+// A Mega Drive VGM (or .vgz) to an FM1-TRAX song, from the command line: web/vgmimport.js, the
+// converter the editor's Import VGM runs, with the DAC kit from web/fm1trax.wasm (host/build_web.sh).
 //   node tools/vgm2fm1d.mjs IN.vgm OUT.fm1d [--title T] [--author A] [--dac N=DRUM]... [--rows R]
 //   node tools/vgm2fm1d.mjs IN.vgm --header OUT.h ...   the song as a C array, DEMO_SONG
 import {readFileSync, writeFileSync} from "node:fs";
@@ -26,7 +26,7 @@ let bytes = readFileSync(files[0]);
 if (bytes[0] === 0x1F && bytes[1] === 0x8B) bytes = gunzipSync(bytes);
 
 // the kit, from the engine
-const url = new URL("../web/fm1drive.wasm", import.meta.url);
+const url = new URL("../web/fm1trax.wasm", import.meta.url);
 const x = (await WebAssembly.instantiate(readFileSync(url), {})).instance.exports;
 x.web_ed_init();
 const cstr = p => { const m = new Uint8Array(x.memory.buffer); let s = ""; while (m[p]) s += String.fromCharCode(m[p++]); return s; };

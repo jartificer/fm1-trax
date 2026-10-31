@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the Yamaha YM2612 (OPN2) and YM3438 (OPN2C), at register level and sample accuracy.
+/* FM1-TRAX: the Yamaha YM2612 (OPN2) and YM3438 (OPN2C), at register level and sample accuracy.
  *
  * One call of opn2_clock is one of the chip's own samples (its master clock / 144: 53,267 Hz on an
  * NTSC Mega Drive). The model is ymfm's (Aaron Giles, BSD-3-Clause, see opn2.c), which is checked

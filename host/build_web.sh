@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
-# Build FM1-DRIVE for the web pages: the app (host/drive_web.c), the chips and the tracker as one
-# freestanding WebAssembly module, web/fm1drive.wasm, which both the emulator and the editor run.
+# Build FM1-TRAX for the web pages: the app (host/drive_web.c), the chips and the tracker as one
+# freestanding WebAssembly module, web/fm1trax.wasm, which both the emulator and the editor run.
 # Needs clang and wasm-ld (LLVM 13 or later); no libc, no Emscripten. Same sources and
 # -ffp-contract=off as the firmware.
 set -e
@@ -22,5 +22,5 @@ for f in host/drive_web.c firmware/src/dsp/opn2.c firmware/src/dsp/psg.c firmwar
 done
 # shellcheck disable=SC2086
 $CC --target=wasm32 -nostdlib -Wl,--no-entry -Wl,--export-dynamic -Wl,--initial-memory=16777216 \
-    -Wl,-z,stack-size=262144 -Wl,--strip-all -o web/fm1drive.wasm $O
-echo "web: web/fm1drive.wasm ($(wc -c < web/fm1drive.wasm) bytes)"
+    -Wl,-z,stack-size=262144 -Wl,--strip-all -o web/fm1trax.wasm $O
+echo "web: web/fm1trax.wasm ($(wc -c < web/fm1trax.wasm) bytes)"

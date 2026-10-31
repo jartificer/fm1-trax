@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: LZ4 blocks (the block format, no frame:
+/* FM1-TRAX: LZ4 blocks (the block format, no frame:
  * https://github.com/lz4/lz4/blob/dev/doc/lz4_Block_format.md), for the songs in flash. A greedy
  * compressor with a 4096-entry hash table (tools/lz4blk.py is the same in Python, and the web editor
  * has it in JavaScript), and a decoder that checks every length against both buffers. */

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fuzzing the editor's VGM import (web/vgmimport.js) and what it makes, in the editor's engine
-// (web/fm1drive.wasm): damaged copies of a real VGM and random register logs for both chips. Each
+// (web/fm1trax.wasm): damaged copies of a real VGM and random register logs for both chips. Each
 // import must either refuse the file with an Error or make a song the engine reads; each song is
 // played for a few seconds, and its output must stay inside the clip (|v| <= 1) with the safety net
 // never going off. Run from the repo root:  node tests/web_fuzz_test.mjs [SEEDS]
@@ -8,7 +8,7 @@ import {readFileSync} from "node:fs";
 import {importVgm} from "../web/vgmimport.js";
 
 const seeds = +(process.argv[2] || 120);
-const x = (await WebAssembly.instantiate(readFileSync("web/fm1drive.wasm"), {})).instance.exports;
+const x = (await WebAssembly.instantiate(readFileSync("web/fm1trax.wasm"), {})).instance.exports;
 x.web_ed_init();
 const cs = p => { const m = new Uint8Array(x.memory.buffer); let s = ""; while (m[p]) s += String.fromCharCode(m[p++]); return s; };
 const kit = Array.from({length: x.web_sample_count()}, (_, i) => ({name: cs(x.web_sample_name(i)),

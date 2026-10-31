@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: fuzzing the sound path for loud-noise bugs. Random songs (instruments, macros, every
+/* FM1-TRAX: fuzzing the sound path for loud-noise bugs. Random songs (instruments, macros, every
  * effect with any value, any timing), random live commands between the blocks (play, stop, the
  * keys, mute, reset, instrument edits), and damaged song streams through song_read, all rendered
  * by the player and the chips. Every sample must stay inside the range the device scales to its

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the sound engine's tests.
+/* FM1-TRAX: the sound engine's tests.
  *
  *   engine_test [WAVDIR]
  *

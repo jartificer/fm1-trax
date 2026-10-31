@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: instruments (docs/DESIGN.md, 4).
+/* FM1-TRAX: instruments (docs/DESIGN.md, 4).
  *
  *   FM   the YM2612's patch, register for register, and optional arpeggio and pitch macros
  *   PSG  macros: volume, arpeggio, pitch, noise mode (the PSG has no other timbre)

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only AND BSD-3-Clause */
-/* FM1-DRIVE: YM2612 / YM3438 emulation (opn2.h).
+/* FM1-TRAX: YM2612 / YM3438 emulation (opn2.h).
  *
  * A C port of the OPN2 parts of ymfm (https://github.com/aaronsgiles/ymfm), whose model of the chip
  * is checked against Nuked-OPN2. The tables and the algorithms below are ymfm's; the structure is

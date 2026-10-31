@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* FM1-DRIVE: the demo song every FM-1 starts with (and the tests play): "Sunset Beach Galaxy" by
+/* FM1-TRAX: the demo song every FM-1 starts with (and the tests play): "Sunset Beach Galaxy" by
  * Tobikomi, from the YM2017 cart (GPL-3.0), converted from its VGM by tools/vgm2fm1d.mjs (see
  * assets/songs/README.md). Shared by the host tests, the app and the web build. */
 #pragma once

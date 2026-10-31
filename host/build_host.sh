@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
-# Build the FM1-DRIVE host simulator (the whole app on this machine) into build/host/drive_host.
+# Build the FM1-TRAX host simulator (the whole app on this machine) into build/host/drive_host.
 # Same sources as the firmware, -ffp-contract=off like the device (no fused multiply-add).
 set -e
 cd "$(dirname "$0")/.."
