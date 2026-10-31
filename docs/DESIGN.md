@@ -5,8 +5,7 @@ console's two sound chips, the Yamaha **YM2612** (OPN2) and the TI **SN76489** P
 with what they can do and nothing they can't. Songs export as `.vgm`, so what you write here plays in
 any VGM player, and on real hardware through a VGM-playing cart or driver.
 
-Status: stages 1–3 are written and tested in the host simulator; the device build and stage 4 (the web
-site) are in progress. Stages are listed at the end.
+Status: stages 1–4 are written, tested in the host simulator, and tested on a real FM-1. Stages are listed at the end.
 
 ## 1. Platform
 

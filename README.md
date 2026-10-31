@@ -5,8 +5,8 @@ emulates the console's two sound chips, the Yamaha YM2612 (six FM channels) and 
 (three square waves and noise), and gives you a pattern tracker in the style of Deflemask and
 Furnace, played from the FM-1's own keys and knobs.
 
-> **Status: in development.** Everything runs and is tested in the host simulator
-> (`tests/run_tests.sh`), and the author has started testing it on a real FM-1. The firmware comes
+> **Status: in development, tested on a real FM-1.** Everything runs and is tested in the host
+> simulator (`tests/run_tests.sh`), and the firmware has been tested on a real FM-1. The firmware comes
 > with no warranty: see [No warranty](#no-warranty) before you install it.
 
 ## What it does
