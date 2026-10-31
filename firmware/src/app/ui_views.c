@@ -433,18 +433,18 @@ static const char *const ENV_N[NENV] = {"AR", "D1R", "D1L", "D2R", "RR", "SSG"};
 
 static uint8_t *op_field(fm_op_t *o, int page, int row)
 {
-    if (page == PG_TONE) {
+    if (page == PG_TONE) {                     /* (a row left from another page: its last) */
         uint8_t *f[NTONE] = {&o->mul, &o->dt, &o->tl, &o->ks, &o->am};
-        return f[row];
+        return f[clampi(row, 0, NTONE - 1)];
     } else {
         uint8_t *f[NENV] = {&o->ar, &o->d1r, &o->sl, &o->d2r, &o->rr, &o->ssg};
-        return f[row];
+        return f[clampi(row, 0, NENV - 1)];
     }
 }
 static int op_max(int page, int row)
 {
     static const uint8_t T[NTONE] = {15, 7, 127, 3, 1}, E[NENV] = {31, 31, 15, 31, 15, 15};
-    return page == PG_TONE ? T[row] : E[row];
+    return page == PG_TONE ? T[clampi(row, 0, NTONE - 1)] : E[clampi(row, 0, NENV - 1)];
 }
 static void op_text(int page, int row, int v, char *b)
 {
@@ -1408,7 +1408,7 @@ static void views_input(void)
         if (song.ins[ui.ins].type == INS_PSG)
             ui.i_page = PG_MAC, ui.i_mac = MAC_VOL;
         else if (ui.i_page == PG_MAC && song.ins[ui.ins].type == INS_FM && ui.i_mac == MAC_VOL)
-            ui.i_page = PG_TONE;
+            ui.i_page = PG_TONE, ui.i_row = clampi(ui.i_row, 0, NTONE - 1);
         go(V_INS);
         return;
     }

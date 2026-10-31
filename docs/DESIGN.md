@@ -152,7 +152,9 @@ without `03xx` ends a tone portamento there (so an imported VGM's pitch follows 
   arpeggio and pitch macros.
 - **PSG**: macros (sequences of up to 64 steps with a loop and a release point): volume (0–15),
   arpeggio (semitones, or fixed notes), pitch (fine), noise mode (NOI only). PSG has no other timbre:
-  only volume shapes the sound.
+  only volume shapes the sound. A note let go goes silent at once, or plays the volume macro's
+  release part once (its last step is not held), or, with a loop after the release point, for at most
+  `PSG_REL_MAX` ticks (4 s at 60 Hz): no note sounds for ever after its key is up.
 - **DAC**: an 8-bit sample on FM6: the sample, its root note, its playback rate (drivers play samples
   at fixed rates; notes pick one), loop on/off.
 

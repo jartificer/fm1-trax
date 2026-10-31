@@ -78,6 +78,14 @@ quiet, and that the safety net (below) works and never goes off on a real song. 
 editor's VGM import: damaged and random VGMs must be refused with a message or import into a song the
 engine reads and plays within the clip.
 
+Hanging notes are fuzzed at two levels. `fuzz_test` plays the keys (notes on and off on any channel,
+instruments changed meanwhile), lets every key go, and requires the chips to fall silent within 5 s
+(`player_hanging()`: no FM operator keyed, every PSG channel at full attenuation, the DAC stopped).
+`tests/ui_fuzz_test.mjs` drives the whole app in the simulator with random sessions (panel keys and MIDI
+held and let go in any order, notes entered, changed with the knobs and deleted, play and stop, views
+changed; 150 seeds, `UI_FUZZ_SEEDS`), then checks that no channel is left to the keys and nothing sounds.
+`tests/scenarios/hang.fd` holds the cases found so far.
+
 `tests/web_install_test.mjs` tests the installer against a simulated FM-1, and
 `tests/web_editor_test.mjs` the editor's engine (songs edited in place, played, exported as VGM) and its
 link against a second copy of the module running as the FM-1. `tests/run_tests.sh` runs both (Node 18 or

@@ -278,12 +278,15 @@ static void macros_start(chan_t *c)
     for (m = 0; m < NMAC; m++)
         c->mpos[m] = 0;
     c->released = 0;
+    c->rel_ticks = 0;
     c->mpitch = 0;
 }
 
 static void macros_release(chan_t *c, const ins_t *in)
 {
     int m;
+    if (!c->released)
+        c->rel_ticks = 0;
     c->released = 1;
     for (m = 0; m < NMAC; m++)
         if (in->mac[m].len && in->mac[m].rel != MACRO_NONE && c->mpos[m] <= in->mac[m].rel)
@@ -318,9 +321,11 @@ static void note_off(int ch)
     chan_t *c = &player.ch[ch];
     const ins_t *in = &song.ins[c->ins];
     if (ch_is_fm(ch)) {
-        if (ch == CH_FM6 && in->type == INS_DAC) {
+        /* FM6: the sample and the operators both, whatever the instrument is now (it may have
+         * changed kind since the note began, or a sample note may have followed an FM one) */
+        if (ch == CH_FM6 && player.md.dac.on)
             md_dac_stop(&player.md);
-        } else if (c->key)
+        if (c->key)
             fm_key(ch, 0);
         keyon_mask &= ~(1u << ch);
     }
@@ -590,8 +595,14 @@ static void chan_tick(int ch)
         }
     } else {
         int att = 15;
-        /* a PSG note sounds while held, and after it is let go only through a volume macro's release */
-        if (c->note && (c->key || (in->mac[MAC_VOL].len && in->mac[MAC_VOL].rel != MACRO_NONE)))
+        /* a PSG note sounds while held, and after it is let go only through a volume macro's release:
+         * the release part once (its last step not held), or a loop after the release point for at
+         * most PSG_REL_MAX ticks, so no note goes on for ever once its key is up */
+        const macro_t *mv = &in->mac[MAC_VOL];
+        int tail = 0;
+        if (mv->len && mv->rel != MACRO_NONE && mv->rel < mv->len)
+            tail = mv->loop != MACRO_NONE && mv->loop > mv->rel ? PSG_REL_MAX : mv->len - mv->rel - 1;
+        if (c->note && (c->key || (c->released && c->rel_ticks < tail)))
             att = 15 - c->vol * macro_val(c, in, MAC_VOL, 15) / 15;
         if (ch == CH_NOI && in->mac[MAC_NOISE].len && c->note) {
             int m = macro_val(c, in, MAC_NOISE, c->noise) & 7;
@@ -600,6 +611,8 @@ static void chan_tick(int ch)
         }
         psg_out(ch, p, att);
     }
+    if (c->released && c->rel_ticks < 255u)
+        c->rel_ticks++;
     if (c->note)
         macros_step(c, in);
 }
@@ -925,5 +938,24 @@ void player_render(int32_t *out, uint32_t n)
 void player_test_poison(void)          /* tests only: the output filter's state absurd, as memory gone bad */
 {
     player.md.dc[0] = player.md.dc[1] = 1 << 30;
+}
+
+/* tests only: what still sounds with no key down: bits 0-5 an FM channel with an operator's key on,
+ * 6-9 a PSG channel not at full attenuation, 10 the DAC. Called after the keys are let go and the song
+ * stopped, it must be 0 once PSG_REL_MAX ticks have gone by: anything else is a hanging note. */
+uint32_t player_hanging(void)
+{
+    uint32_t m = 0;
+    int c, i;
+    for (c = 0; c < 6; c++)
+        for (i = 0; i < 4; i++)
+            if (player.md.fm.ch[c].op[i].key)
+                m |= 1u << c;
+    for (c = 0; c < 4; c++)
+        if (player.md.psg.vol[c] != 15)
+            m |= 1u << (6 + c);
+    if (player.md.dac.on)
+        m |= 1u << 10;
+    return m;
 }
 #endif

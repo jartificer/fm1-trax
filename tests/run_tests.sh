@@ -85,6 +85,7 @@ if echo 'int main(void){return 0;}' | $CC -fsanitize=address,undefined -x c -o $
         mkdir -p "build/scenarios-asan/$n"
         run "scenario-$n-asan" "$B/drive_host_asan" "$s" "build/scenarios-asan/$n"
     done
+    command -v node >/dev/null 2>&1 && run ui-fuzz-asan env DRIVE_HOST="$B/drive_host_asan" node tests/ui_fuzz_test.mjs 40 5000
 fi
 # the web pages: the engine as WebAssembly (needs clang with the wasm32 target), the installer and the
 # editor's link, under Node
@@ -97,6 +98,8 @@ if command -v node >/dev/null 2>&1; then
     run web-install node tests/web_install_test.mjs
     [ -f web/fm1drive.wasm ] && run web-editor node tests/web_editor_test.mjs
     [ -f web/fm1drive.wasm ] && run web-fuzz node tests/web_fuzz_test.mjs ${WEB_FUZZ_SEEDS:-60}
+    # the whole app, random sessions on the panel and over MIDI: no hanging notes
+    run ui-fuzz node tests/ui_fuzz_test.mjs ${UI_FUZZ_SEEDS:-150}
 else
     echo "  skip web tests (no node)"
 fi
