@@ -1,6 +1,6 @@
 {
   "what": "A Mega Drive / Genesis music tracker. It emulates the YM2612 and SN76489 chips: six FM channels, three square waves and noise, with Deflemask-style effects, 128 FM presets, a drum kit on the DAC, 256 song slots, a demo song and VGM export.",
-  "author": "Radu Mailat",
+  "author": "jartificer",
   "kinds": ["tracker"],
   "play": "https://jartificer.github.io/fm1-trax/",
   "editor": "https://jartificer.github.io/fm1-trax/editor.html",
