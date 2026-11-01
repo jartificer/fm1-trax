@@ -484,7 +484,9 @@ void cs_wabort(void) { cs_w.open = 0; }
 
 int cs_delete(uint32_t o)                      /* 0, or a flash error */
 {
-    static const uint8_t zero[2] = {0, 0};
+    /* in RAM, never const: a const is in the XIP flash, which cannot be read while it is being
+     * programmed (on the FM-1 that froze the CPU until the watchdog rebooted it) */
+    static uint8_t zero[2];
     uint32_t c, pass;
     int rc;
     if (o >= CS_NOBJ)

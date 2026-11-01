@@ -209,7 +209,7 @@ always edit four things side by side: in the pattern, the cell's four fields; in
 | HOME | **Pattern** view. Again: **Stage** view (the visualiser, below) |
 | SEQ | **Order** view (the song's arrangement). Again: song settings |
 | EDIT | **Instrument** editor (the instrument under the cursor) |
-| GLO | **Songs** (load, save as, new, delete). Again: **Setup** |
+| GLO | **Songs**: SEL loads, SAVE saves to the highlighted slot, ENV starts a new song, FX brings back the demo song, LFO held twice deletes. Again: **Setup** |
 | PLAY | Play / stop. In the pattern view from the cursor's pattern; held 1 s: the song from the top |
 | REC | Edit mode on / off (lit red): the keys write notes. Playing with REC on records live, quantised to rows |
 | SAVE | Save the song to its slot. In Songs: to the highlighted slot (a used slot asks twice) |

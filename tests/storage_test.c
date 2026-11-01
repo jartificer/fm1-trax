@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "../host/ro_mem.h"
 static uint8_t nor[0x100000];
 static int fail_after = -1;            /* torn-write injection: stop after N programs */
 
@@ -22,6 +23,10 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
         fail_after--;
     if ((off & 0xFFu) + n > 256u) {
         printf("page wrap at %#x\n", off);
+        exit(1);
+    }
+    if (ro_mem(src)) {
+        printf("program at %#x from read-only memory (the device's XIP flash)\n", off);
         exit(1);
     }
     for (i = 0; i < n; i++)

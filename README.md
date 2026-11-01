@@ -125,7 +125,7 @@ like faders on a mixer.
 | HOME | Pattern view; again: the stage view |
 | SEQ | Order list; again: song settings |
 | EDIT | Instrument editor (the instrument under the cursor); its SEL: the library |
-| GLO | Songs (load, save, new, delete); again: setup |
+| GLO | Songs (load, save, new, FX: the demo song, LFO held twice: delete); again: setup |
 | PLAY | Play and stop; held: play from the top |
 | REC | Edit mode: the keys write notes (and record live while playing) |
 | SAVE | Save the song |
