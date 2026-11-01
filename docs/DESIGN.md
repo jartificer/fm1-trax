@@ -315,7 +315,8 @@ and moves it to and from the device over SysEx (`F0 7D 46 44 …`, the protocol 
 
 ## 7. Web (branch `gh-pages`)
 
-A static site, kept private until the repository is public (Pages is not enabled):
+A static site, published with GitHub Pages at https://jartificer.github.io/fm1-trax/ (the `gh-pages`
+branch holds `web/`'s files at its root):
 
 - **Emulator**: the firmware's app compiled to WebAssembly (as FM1-GM's), with the FM-1's panel; songs
   saved in the browser.

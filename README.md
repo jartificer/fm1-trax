@@ -11,6 +11,20 @@ Furnace, played from the FM-1's own keys and knobs. (FM1-TRAX was called FM1-DRI
 
 ![Various views of the FM1TRAX firmware, with the intro screen at the center](docs/fm1trax-collage.png)
 
+## Try it in your browser
+
+The FM1-TRAX website is at **[jartificer.github.io/fm1-trax](https://jartificer.github.io/fm1-trax/)**.
+Nothing to install, and you don't need an FM-1 to try it:
+
+- **[Emulator and installer](https://jartificer.github.io/fm1-trax/)**: the real firmware running in the
+  page on a drawing of the FM-1's panel, played with the mouse or the computer keyboard. With an FM-1
+  connected over USB, the same page installs the latest release on it (Chrome, Edge or Opera on a
+  computer).
+- **[Editor](https://jartificer.github.io/fm1-trax/editor.html)**: a desktop tracker on the same engine,
+  which also imports Mega Drive VGMs and exports VGM and WAV.
+
+See [Emulator and editor](#emulator-and-editor) for more.
+
 ## What it does
 
 - **The real chips, limits included.** 6 FM channels with 4 operators each, the 8 algorithms,
@@ -67,8 +81,9 @@ store may overwrite data another firmware left in the flash, so back up anything
 before you install it. Likewise, other firmwares cannot read FM1-TRAX's songs: back them up from the
 web editor (as `.fm1d` files or VGM) before you install something else.
 
-Or from the browser: the page in `web/` installs over Web MIDI in Chrome, Edge or Opera on a computer
-(the same update as `fm1_install.py`).
+Or from the browser, with nothing to install: open [jartificer.github.io/fm1-trax](https://jartificer.github.io/fm1-trax/)
+in Chrome, Edge or Opera on a computer, connect the FM-1, press Connect MIDI and then Install. It installs the latest
+release over Web MIDI (the same update as `fm1_install.py`).
 
 Holding OCT- and OCT+ for 5 seconds puts FM1-TRAX into update mode, for an installer that cannot
 reach it otherwise.
@@ -82,12 +97,14 @@ script's header and [FM-1-transporter](https://github.com/kurogedelic/FM-1-trans
 
 ## Emulator and editor
 
-The `web/` folder is a website (published from the `gh-pages` branch once the repository is public):
+The website at [jartificer.github.io/fm1-trax](https://jartificer.github.io/fm1-trax/) is built from the
+`web/` folder (published from the `gh-pages` branch):
 
-- **Emulator**: the firmware compiled to WebAssembly, on a drawing of the FM-1's panel, played with the
+- **[Emulator](https://jartificer.github.io/fm1-trax/)**: the firmware compiled to WebAssembly, on a drawing of the FM-1's panel, played with the
   mouse or the computer keyboard. Songs saved there stay in the browser.
-- **Installer**: installs the firmware on an FM-1 over USB MIDI (Chrome, Edge or Opera).
-- **Editor**: a desktop tracker on the same engine, with Furnace-style keys: patterns, orders,
+- **[Installer](https://jartificer.github.io/fm1-trax/)**: installs the latest release on an FM-1 over USB MIDI
+  (Chrome, Edge or Opera on a computer).
+- **[Editor](https://jartificer.github.io/fm1-trax/editor.html)**: a desktop tracker on the same engine, with Furnace-style keys: patterns, orders,
   instruments (FM operators with envelope graphs, macros drawn with the mouse, DAC samples), presets,
   undo, copy and paste, transpose. It opens and saves `.fm1d` songs and `.fm1i` instruments,
   **imports Mega Drive VGMs** (`.vgm` / `.vgz`, as logged by Deflemask, Furnace or an emulator) as

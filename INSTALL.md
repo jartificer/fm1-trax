@@ -15,6 +15,10 @@ The bundle holds:
 leave a device unable to start and may void its warranty; you install it at your own risk. Read "If
 something goes wrong" below before you start.
 
+**The easiest way** needs no Python: open https://jartificer.github.io/fm1-trax/ in Chrome, Edge or
+Opera on a computer, connect the FM-1, press Connect MIDI and then Install. The steps below are for installing from this
+bundle instead.
+
 **Mind the volume** the first time you play it: start with the FM-1's volume low.
 
 ## What you need
