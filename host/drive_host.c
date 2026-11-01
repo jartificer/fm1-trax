@@ -59,6 +59,13 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
             if (x + i < 240u && y + j < 240u)
                 fb[(y + j) * 240u + x + i] = px[j * w + i];
 }
+/* text that runs off the screen, or out of its box, loses letters ("REAK TO ROW"): the simulator stops */
+static void host_text_clipped(const char *what, const char *s)
+{
+    fprintf(stderr, "screen: %s \"%s\" does not fit\n", what, s);
+    exit(1);
+}
+#define HOST_TEXT_CLIPPED host_text_clipped
 #include "../firmware/src/gfx.c"
 static unsigned str_len(const char *s) { return (unsigned)strlen(s); }
 static void str_cpy(char *d, const char *s, unsigned max)

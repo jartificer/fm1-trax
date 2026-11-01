@@ -11,18 +11,44 @@ static void mem0(void *p, uint32_t n)
 }
 
 /* ------------------------------------------------------------ effects --- */
+/* each effect's name, in full (the header, the web editor) and short: at most 9 characters, the
+ * width of a knob's quarter of the footer in the 6-pixel font (tests/host/trk_test.c checks it) */
 static const struct {
     uint8_t fx;
-    const char *name;
+    const char *name, *brief;
 } FX_NAMES[] = {
-    {FX_ARP, "ARPEGGIO"}, {FX_PORTA_UP, "PORTA UP"}, {FX_PORTA_DN, "PORTA DOWN"}, {FX_TONE_PORTA, "TONE PORTA"},
-    {FX_VIBRATO, "VIBRATO"}, {FX_PAN, "PAN L/R"}, {FX_SPEED1, "SPEED ODD"}, {FX_VOL_SLIDE, "VOL SLIDE"},
-    {FX_JUMP, "JUMP TO ORD"}, {FX_RETRIG, "RETRIGGER"}, {FX_BREAK, "BREAK TO ROW"}, {FX_SPEED, "SPEED"},
-    {FX_LFO, "LFO ON/RATE"}, {FX_FB, "FEEDBACK"}, {FX_TL1, "OP1 LEVEL"}, {FX_TL2, "OP2 LEVEL"},
-    {FX_TL3, "OP3 LEVEL"}, {FX_TL4, "OP4 LEVEL"}, {FX_MUL, "OP MULTIPLE"}, {FX_DAC, "DAC ON/OFF"},
-    {FX_EXT3, "FM3 EXTENDED"}, {FX_AR, "ATTACK ALL"}, {FX_AR1, "OP1 ATTACK"}, {FX_AR2, "OP2 ATTACK"},
-    {FX_AR3, "OP3 ATTACK"}, {FX_AR4, "OP4 ATTACK"}, {FX_NOISE, "NOISE MODE"}, {FX_SLIDE_UP, "NOTE UP"},
-    {FX_SLIDE_DN, "NOTE DOWN"}, {FX_FINE, "FINE TUNE"}, {FX_CUT, "NOTE CUT"}, {FX_DELAY, "NOTE DELAY"},
+    {FX_ARP, "ARPEGGIO", "ARPEGGIO"},
+    {FX_PORTA_UP, "PORTA UP", "PORTA UP"},
+    {FX_PORTA_DN, "PORTA DOWN", "PORTA DN"},
+    {FX_TONE_PORTA, "TONE PORTA", "TONE PORT"},
+    {FX_VIBRATO, "VIBRATO", "VIBRATO"},
+    {FX_PAN, "PAN L/R", "PAN L/R"},
+    {FX_SPEED1, "SPEED ODD", "SPEED ODD"},
+    {FX_VOL_SLIDE, "VOL SLIDE", "VOL SLIDE"},
+    {FX_JUMP, "JUMP TO ORD", "JUMP ORD"},
+    {FX_RETRIG, "RETRIGGER", "RETRIGGER"},
+    {FX_BREAK, "BREAK TO ROW", "BREAK ROW"},
+    {FX_SPEED, "SPEED", "SPEED"},
+    {FX_LFO, "LFO ON/RATE", "LFO ON/RT"},
+    {FX_FB, "FEEDBACK", "FEEDBACK"},
+    {FX_TL1, "OP1 LEVEL", "OP1 LEVEL"},
+    {FX_TL2, "OP2 LEVEL", "OP2 LEVEL"},
+    {FX_TL3, "OP3 LEVEL", "OP3 LEVEL"},
+    {FX_TL4, "OP4 LEVEL", "OP4 LEVEL"},
+    {FX_MUL, "OP MULTIPLE", "OP MULT"},
+    {FX_DAC, "DAC ON/OFF", "DAC SW"},
+    {FX_EXT3, "FM3 EXTENDED", "FM3 EXT"},
+    {FX_AR, "ATTACK ALL", "ATK ALL"},
+    {FX_AR1, "OP1 ATTACK", "OP1 ATK"},
+    {FX_AR2, "OP2 ATTACK", "OP2 ATK"},
+    {FX_AR3, "OP3 ATTACK", "OP3 ATK"},
+    {FX_AR4, "OP4 ATTACK", "OP4 ATK"},
+    {FX_NOISE, "NOISE MODE", "NOI MODE"},
+    {FX_SLIDE_UP, "NOTE UP", "NOTE UP"},
+    {FX_SLIDE_DN, "NOTE DOWN", "NOTE DOWN"},
+    {FX_FINE, "FINE TUNE", "FINE TUNE"},
+    {FX_CUT, "NOTE CUT", "NOTE CUT"},
+    {FX_DELAY, "NOTE DELAY", "NOTE DLY"},
 };
 #define NFX (sizeof(FX_NAMES) / sizeof(FX_NAMES[0]))
 
@@ -32,6 +58,15 @@ const char *fx_name(uint8_t fx)
     for (i = 0; i < NFX; i++)
         if (FX_NAMES[i].fx == fx)
             return FX_NAMES[i].name;
+    return 0;
+}
+
+const char *fx_brief(uint8_t fx)
+{
+    uint32_t i;
+    for (i = 0; i < NFX; i++)
+        if (FX_NAMES[i].fx == fx)
+            return FX_NAMES[i].brief;
     return 0;
 }
 

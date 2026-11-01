@@ -198,6 +198,23 @@ static void test_song(void)
     CHECK(song_read(&song, get, NULL) < 0, "a cut stream is refused");
 }
 
+/* every effect has a name, and a short one that fits a knob's quarter of the footer (60 pixels of
+ * the 6-pixel font, less a margin for the dividers): longer, it ran off the screen ("REAK TO ROW") */
+static void test_fx_names(void)
+{
+    int n = 0;
+    uint8_t fx = fx_next(FX_NONE, 1);
+    while (fx != FX_NONE && n < 256) {
+        const char *a = fx_name(fx), *b = fx_brief(fx);
+        CHECK(a && b && *a && *b, "effect %02X has its names", fx);
+        if (b)
+            CHECK(strlen(b) <= 9, "effect %s: \"%s\" is too long for the footer", a, b);
+        fx = fx_next(fx, 1);
+        n++;
+    }
+    CHECK(n >= 30 && fx_name(FX_NONE) == NULL && fx_brief(FX_NONE) == NULL, "%d effects", n);
+}
+
 /* ------------------------------------------------------------ player --- */
 static void one_note(int ch, int ins, int note, uint8_t fx, uint8_t fxv)
 {
@@ -425,6 +442,7 @@ int main(int argc, char **argv)
     wavdir = argc > 1 ? argv[1] : NULL;
     presets_bank_init();
     test_song();
+    test_fx_names();
     test_player();
     test_presets();
     test_vgm();
