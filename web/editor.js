@@ -1036,7 +1036,7 @@ async function importFile(name, b) {
         return afterLoad(`${name}: the import did not read back (a new song instead)`, true);
     }
     const i = r.info;
-    afterLoad(`${name}: imported, ${i.orders} positions, ${i.instruments} instruments`);
+    afterLoad(`${name}: imported, ${i.orders} positions, ${i.instruments} instruments${i.cut ? ", cut short (too long for the pattern memory)" : ""}`);
     $("imp-sum").textContent = `"${i.title}"${i.author ? ` by ${i.author}` : ""}: ${Math.floor(i.seconds / 60)}:${String(Math.round(i.seconds % 60)).padStart(2, "0")}` +
         `${i.loop ? ", looping" : ""}, ${i.orders} order positions of ${i.rows} rows, ${i.instruments} instruments.`;
     const m = Object.entries(i.match);
