@@ -155,6 +155,16 @@ static uint32_t glyph(const felucca_font_t *f, uint32_t ch)
 static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char *s, uint16_t c)
 {
     uint32_t r = c >> 11, g = (c >> 5) & 63u, b = c & 31u;
+#ifdef HOST_TEXT_CLIPPED
+    {
+        const char *t = s;
+        int32_t e = x;
+        for (; *t; t++)
+            e += f->adv[glyph(f, (uint8_t)*t)];
+        if (*s && (x < 0 || e > (int32_t)cv_w + 1))   /* the last advance's spacing may hang over */
+            HOST_TEXT_CLIPPED("text", s);
+    }
+#endif
     if (y + cv_oy + (int32_t)f->h <= cv_y0 || y + cv_oy >= cv_y1) {   /* outside the band: the pen only */
         for (; *s; s++)
             x += f->adv[glyph(f, (uint8_t)*s)];

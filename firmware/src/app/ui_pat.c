@@ -21,10 +21,10 @@ static int ins_ch(int ins) { return song_ins_ch(&song, &song.ins[ins], ins, cur_
 static void ins_ch_say(int ins)
 {
     const ins_t *in = &song.ins[ins];
-    ui_say(in->type == INS_DAC ? "DRUMS PLAY ON FM6"
-           : in->type == INS_PSG ? (song_ins_noise(&song, in, ins) ? "NOISE PLAYS ON NOI" : "TONES PLAY ON SQ1-SQ3")
-                                 : "FM PLAYS ON FM1-FM6",
-           in->type == INS_PSG && cur_ch() == CH_NOI ? "FOR NOISE: A NOISE MACRO" : "NOT WRITTEN HERE");
+    ui_say("NOT WRITTEN", in->type == INS_PSG && cur_ch() == CH_NOI ? "NEEDS NOISE MACRO"
+                          : in->type == INS_DAC                     ? "DRUMS: FM6"
+                          : in->type == INS_PSG ? (song_ins_noise(&song, in, ins) ? "NOISE: NOI" : "TONES: SQ1-SQ3")
+                                                : "FM: FM1-FM6");
 }
 
 /* the clipboard: a block of cells */
@@ -535,7 +535,7 @@ static void pat_draw(void)
             str_cpy(cc, "FX ", 4), cc[3] = f1[2], cc[4] = f1[3], cc[5] = 0;
             footer(nn, a, b, cc);
         } else {
-            const char *n1 = c && c->fx[0] ? fx_name(c->fx[0]) : "FX1", *n2 = c && c->fx[1] ? fx_name(c->fx[1]) : "FX2";
+            const char *n1 = c && c->fx[0] ? fx_brief(c->fx[0]) : "FX1", *n2 = c && c->fx[1] ? fx_brief(c->fx[1]) : "FX2";
             a[0] = f1[2], a[1] = f1[3], a[2] = 0;
             dd[0] = f2[2], dd[1] = f2[3], dd[2] = 0;
             footer(n1 ? n1 : "FX1", a, n2 ? n2 : "FX2", dd);

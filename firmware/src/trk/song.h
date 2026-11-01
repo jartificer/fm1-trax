@@ -69,7 +69,8 @@ enum {
     FX_CUT = 0xED,         /* ECxx */
     FX_DELAY,              /* EDxx */
 };
-const char *fx_name(uint8_t fx);           /* "ARP", "PORTA UP", ... or NULL: not an effect */
+const char *fx_name(uint8_t fx);           /* "ARPEGGIO", "PORTA UP", ... or NULL: not an effect */
+const char *fx_brief(uint8_t fx);          /* the same, at most 9 characters: "BREAK ROW", ... */
 uint8_t fx_next(uint8_t fx, int dir);      /* the next effect in the list (for the knob), FX_NONE between */
 
 typedef struct {

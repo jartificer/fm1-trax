@@ -393,15 +393,24 @@ static void draw_header(void)
         return;
     copper(0, HDR_H, ui.frame);
     if (plat_ms() < ui.msg_until && ui.view != V_INTRO) {   /* a message takes the header's place */
+        /* in the big font if it fits, else in the small one (a song's or an instrument's name) */
+        const felucca_font_t *f = 6 + text_w(&FONT_B, ui.msg[0]) + 8 + text_w(&FONT_B, ui.msg[1]) <= 236
+                                      ? &FONT_B : &FONT_XS;
+        int32_t y = f == &FONT_B ? 4 : 6;
         rect(0, 0, 240, HDR_H, th->sel);
-        x = text_sh(6, 4, &FONT_B, ui.msg[0], th->hi);
-        text_sh(x + 8, 4, &FONT_B, ui.msg[1], th->text);
+        x = text_sh(6, y, f, ui.msg[0], th->hi);
+        text_sh(x + 8, y, f, ui.msg[1], th->text);
         rect(0, HDR_H - 1, 240, 1, th->acc);
         return;
     }
-    x = text_sh(4, 4, &FONT_B, song.title[0] ? song.title : "UNTITLED", ui.dirty ? th->hi : th->text);
-    if (ui.dirty)
-        x = text_sh(x, 4, &FONT_B, "*", th->hi);
+    {   /* the title, left of the transport (x 170): a long one in the small font */
+        const char *t = song.title[0] ? song.title : "UNTITLED";
+        const felucca_font_t *f = 4 + text_w(&FONT_B, t) + text_w(&FONT_B, "*") <= 166 ? &FONT_B : &FONT_XS;
+        int32_t y = f == &FONT_B ? 4 : 6;
+        x = text_sh(4, y, f, t, ui.dirty ? th->hi : th->text);
+        if (ui.dirty)
+            x = text_sh(x, y, f, "*", th->hi);
+    }
     (void)x;
     /* right: transport, position, octave */
     song_pos_text(b);
@@ -434,8 +443,13 @@ static void footer(const char *k1, const char *k2, const char *k3, const char *k
     for (i = 0; i < 4; i++) {
         if (i)
             rect(i * 60, FTR_Y + 3, 1, 10, th->line);
-        if (k[i])
+        if (k[i]) {
+#ifdef HOST_TEXT_CLIPPED
+            if (text_w(&FONT_XS, k[i]) > 54)         /* 9 letters: wider meets the dividers */
+                HOST_TEXT_CLIPPED("footer label", k[i]);
+#endif
             text_c(i * 60 + 30, FTR_Y + 2, &FONT_XS, k[i], i == 0 ? th->acc : th->text);
+        }
     }
 }
 

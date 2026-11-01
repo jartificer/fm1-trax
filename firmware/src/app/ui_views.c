@@ -905,7 +905,7 @@ static void lib_input(void)
     if (pressed(B_SAVE)) {
         int slot;
         if (ui.lib_src < LS_UFM) {
-            ui_say("PRESETS ARE FIXED", "PICK A USER BANK");
+            ui_say("PRESETS FIXED", "USE A USER BANK");
             return;
         }
         slot = lib_user_slot(ui.lib_src, ui.lib_pos);
@@ -967,7 +967,7 @@ static void songs_input(void)
     if (pressed(B_SEL)) {                      /* load */
         if (!slot_info[ui.sl_pos].used) {
             ui_say("EMPTY SLOT", "ENV NEW  FX DEMO");
-        } else if (!ui.dirty || confirm(1, "UNSAVED CHANGES", "SEL AGAIN: LOAD")) {
+        } else if (!ui.dirty || confirm(1, "UNSAVED SONG", "SEL AGAIN: LOAD")) {
             int rc;
             player_post(PC_STOP, 0, 0, 0);
             lock();
@@ -976,11 +976,11 @@ static void songs_input(void)
             set.song = (uint8_t)ui.sl_pos;
             settings_save();
             song_loaded();
-            ui_say(rc == 0 ? "LOADED" : "DAMAGED SONG", rc == 0 ? song.title : "A NEW ONE INSTEAD");
+            ui_say(rc == 0 ? "LOADED" : "DAMAGED SONG", rc == 0 ? song.title : "NEW SONG INSTEAD");
             go(V_PAT);
         }
     }
-    if (pressed(B_ENV) && (!ui.dirty || confirm(2, "UNSAVED CHANGES", "ENV AGAIN: NEW"))) {
+    if (pressed(B_ENV) && (!ui.dirty || confirm(2, "UNSAVED SONG", "ENV AGAIN: NEW"))) {
         player_post(PC_STOP, 0, 0, 0);
         lock();
         song_init(&song);
@@ -991,7 +991,7 @@ static void songs_input(void)
         ui_say("NEW SONG", "SAVE TO KEEP IT");
         go(V_PAT);
     }
-    if (pressed(B_FX) && (!ui.dirty || confirm(5, "UNSAVED CHANGES", "FX AGAIN: DEMO"))) {
+    if (pressed(B_FX) && (!ui.dirty || confirm(5, "UNSAVED SONG", "FX AGAIN: DEMO"))) {
         player_post(PC_STOP, 0, 0, 0);         /* the demo song back, as a new song for this slot */
         lock();
         demo_song(&song);
