@@ -114,5 +114,7 @@ if command -v node >/dev/null 2>&1; then
 else
     echo "  skip web tests (no node)"
 fi
+# the card on The Firmware Hub (fmhub.json and its picture)
+run fmhub python3 tools/fmhub_check.py
 [ $FAIL -eq 0 ] && echo "all tests passed" || echo "TESTS FAILED"
 exit $FAIL
