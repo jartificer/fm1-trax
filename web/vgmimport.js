@@ -23,8 +23,8 @@
 //         the noise mode 20xy.
 //   DAC   each sample start is a note on FM6 of a DAC instrument, the sample the kit drum most like
 //         it (FM1-TRAX plays its own kit, not the VGM's samples).
-// The patterns are cut from the rows with the repeats shared, and the VGM's loop point is the
-// song's. Logs made by a tracker convert closely; a game's sound driver, with its own timing,
+// The patterns are cut from the rows with the repeats shared (see layout), and the VGM's loop point
+// is the song's; a song too long for the pattern memory is cut short, with a note. Logs made by a tracker convert closely; a game's sound driver, with its own timing,
 // approximately. FM3's special mode (four pitches) is played as one.
 
 // ---------------------------------------------------------------- song.h ---
@@ -168,7 +168,7 @@ function replay(vgm) {
     const fmHz = vgm.fmClock / 144;
     const psgClk = vgm.psgClock || PSG_CLK;
     const key = [0, 0, 0, 0, 0, 0], per = [0, 0, 0, 0], att = [15, 15, 15, 15];
-    let latch = 0, i = 0;
+    let latch = 0, i = 0, rose = [0, 0, 0, 0];
     const frames = [];
     const fmState = ch => {
         const r = reg[ch / 3 | 0], k = ch % 3;
@@ -184,7 +184,7 @@ function replay(vgm) {
             pan: r[0xB4 + k] >> 6, ops};
     };
     for (let f = 0; f < n; f++) {
-        const fr = {on: [0, 0, 0, 0, 0, 0], off: [0, 0, 0, 0, 0, 0], dac: null, restart: [0, 0, 0, 0]};
+        const fr = {on: [0, 0, 0, 0, 0, 0], off: [0, 0, 0, 0, 0, 0], dac: null, restart: [0, 0, 0, 0], rise: [0, 0, 0, 0], ramp: [0, 0, 0, 0]};
         while (i < vgm.ev.length && vgm.ev[i][0] < t0 + (f + 0.5) * tick) {
             const [, kind, a, v] = vgm.ev[i++];
             if (kind === 0) {
@@ -199,12 +199,16 @@ function replay(vgm) {
                     latch = v >> 5 & 3;
                     if (v & 0x10) {
                         if ((v & 15) < att[latch] || att[latch] === 15) fr.restart[latch] = 1;
+                        // a rise right after one: the next step of an attack, rising tick by tick
+                        if ((v & 15) < att[latch] && att[latch] < 15 && rose[latch]) fr.ramp[latch] = 1;
+                        if ((v & 15) < att[latch]) fr.rise[latch] = 1;
                         att[latch] = v & 15;
                     } else if (latch === 3) per[3] = v & 7;
                     else per[latch] = per[latch] & 0x3F0 | v & 15;
                 } else if (latch < 3) per[latch] = per[latch] & 15 | (v & 0x3F) << 4;
             } else if (vgm.ev[i - 1][4] !== undefined) fr.dac = vgm.ev[i - 1][4];
         }
+        rose = fr.rise;
         fr.key = key.slice();
         fr.fm = [0, 1, 2, 3, 4, 5].map(fmState);
         fr.dacOn = reg[0][0x2B] >> 7;
@@ -221,12 +225,18 @@ function replay(vgm) {
     return {n, frames, psgPitch};
 }
 
-// the row grid: (speed of the even rows, of the odd ones, first tick), the coarsest that nearly every
-// note start falls on
+// the row grid: (speed of the even rows, of the odd ones, first tick). A tracker's log: the coarsest
+// grid that nearly every note start falls on. Else (a driver with its own timing, note delays, speed
+// changes) the coarsest on which next to no channel has two starts in one row: the notes off the grid
+// keep their tick with a note delay (EDxx), and a row holds only one note a channel; and a PSG
+// envelope's attack, rising tick by tick, is one note, not one a tick (ramps).
 function findGrid(fr) {
-    const starts = [];
+    const starts = [], chan = Array.from({length: 11}, () => []);
     fr.frames.forEach((x, f) => {
         if (x.on.some(Boolean) || x.dac !== null || x.restart.some(Boolean)) starts.push(f);
+        x.on.forEach((v, c) => v && chan[c].push(f));
+        x.restart.forEach((v, c) => v && !x.ramp[c] && x.att[c] < 15 && chan[6 + c].push(f));
+        if (x.dac !== null) chan[10].push(f);
     });
     let best = null;
     for (let s0 = 1; s0 <= 31; s0++)
@@ -243,7 +253,35 @@ function findGrid(fr) {
                     best = {key, s0, s1, off: off % (s0 === s1 ? s0 : per), hit: h2};
             }
         }
-    return best;
+    if (best.s0 + best.s1 > 2) return best;
+    // no tracker's grid: the coarsest that loses at most 1 start in 200 (and the fewest), then the
+    // most on it; swing of up to 3 ticks
+    const total = chan.reduce((a, c) => a + c.length, 0), budget = Math.floor(total / 200);
+    let alt = null;
+    for (let s0 = 1; s0 <= 31; s0++)
+        for (let s1 = Math.max(1, s0 - 3); s1 <= Math.min(31, s0 + 3); s1++) {
+            const per = s0 + s1;
+            if (s0 !== s1 && s0 + s1 < 3) continue;
+            if (alt && per < alt.per) continue;
+            for (let off = 0; off < (s0 === s1 ? s0 : per); off++) {
+                let lost = 0, on = 0;
+                for (const c of chan) {
+                    let prev = -1;
+                    for (const f of c) {
+                        const q = Math.floor((f - off) / per), m = f - off - q * per;
+                        const row = 2 * q + (m >= s0 ? 1 : 0);
+                        if (row === prev) lost++;
+                        prev = row;
+                        if (m === 0 || m === s0) on++;
+                    }
+                    if (lost > budget) break;
+                }
+                if (lost > budget) continue;
+                const key = [per, -lost, on, s0 === s1 ? 1 : 0, -off];
+                if (!alt || cmp(key, alt.key) > 0) alt = {key, per, s0, s1, off, hit: on / Math.max(1, total), lost, ramps: true};
+            }
+        }
+    return alt && alt.per > 2 ? alt : best;
 }
 const cmp = (a, b) => { for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return a[k] > b[k] ? 1 : -1; return 0; };
 
@@ -496,7 +534,8 @@ export function importVgm(bytes, opt = {}) {
     const fr = replay(vgm), F = fr.frames;
     const g = findGrid(fr);
     note(`rows: speed ${g.s0}${g.s1 !== g.s0 ? "/" + g.s1 : ""} at ${+hz.toFixed(2)} Hz, ${Math.round(g.hit * 100)}% of the notes on the grid`);
-    if (g.hit < 0.97) note("the notes do not keep to one grid (not a tracker's log?): they are moved to the nearest row");
+    if (g.hit < 0.97) note("the notes do not keep to one grid (not a tracker's log?): those off it are delayed (EDxx) to their tick");
+    if (g.lost) note(`${g.lost} notes start in the same row as the one before on their channel: they are left out`);
     if (F.some(x => x.ext3)) note("FM3 special mode: its four pitches are played as one");
     // the rows: their first tick, their length (a whole number of row pairs)
     const rowTick = [];
@@ -589,7 +628,7 @@ export function importVgm(bytes, opt = {}) {
     for (let c = 0; c < 4; c++) {
         const col = cells[CH_SQ1 + c];
         const starts = [];
-        for (let f = rowTick[0]; f < endTick; f++) if (F[f].restart[c] && F[f].att[c] < 15) starts.push(f);
+        for (let f = rowTick[0]; f < endTick; f++) if (F[f].restart[c] && !(g.ramps && F[f].ramp[c]) && F[f].att[c] < 15) starts.push(f);
         starts.forEach((f, i) => {
             const end = Math.min(i + 1 < starts.length ? starts[i + 1] : endTick, f + 255);
             const e = [];
@@ -651,64 +690,226 @@ export function importVgm(bytes, opt = {}) {
         }
     }
 
-    // ---- the loop: what the effects leave on at the end must not run on into the loop
-    if (loopRow) {
-        for (let ch = 0; ch < 10; ch++) {
-            const psg = ch >= CH_SQ1, m = psg ? macros : new Map();
-            const [atLoop] = simulate(new Chan(psg), cells[ch].slice(0, loopRow), ticks.slice(0, loopRow), m);
-            const [atEnd] = simulate(new Chan(psg), cells[ch], ticks, m);
-            const cell = cells[ch][loopRow];
-            cell.fx = cell.fx || [];
-            if (atEnd.vibDepth && !atLoop.vibDepth && cell.fx.length < 2 && !cell.fx.some(([f]) => f === FX.VIBRATO)) cell.fx.push([FX.VIBRATO, 0]);
-            if (atEnd.slide && !atLoop.slide && cell.fx.length < 2 && !cell.fx.some(([f]) => f === FX.PORTA_UP || f === FX.PORTA_DN)) cell.fx.push([FX.PORTA_UP, 0]);
-        }
-    }
-
-    // ---- patterns: the rows cut, the repeats shared
-    let rows = opt.rows || 64, pat = null;
-    for (const r0 of [rows, 32, 16, 8]) {
-        if (r0 > rows) continue;
-        if (Math.ceil(nrows / r0) > MAX_ORD) continue;
-        pat = patterns(cells, nrows, r0, loopRow);
-        if (pat) { if (r0 !== rows) note(`patterns of ${r0} rows (of ${rows} they did not fit)`); rows = r0; break; }
-    }
-    if (!pat) throw Object.assign(new Error("the song is too long or varied for the tracker's pattern memory"), {notes});
-    if (loopRow % rows) note(`the loop point (row ${loopRow}) is inside a pattern: the song loops to its start`);
-    Object.assign(song, pat, {rows, loop: Math.floor(loopRow / rows)});
+    // ---- the patterns: the rows cut where the repeats share the most, within the tracker's memory
+    const fit = layout(cells, nrows, ticks, loopRow, macros, opt.rows || 64);
+    if (!fit) throw Object.assign(new Error("the song does not fit the tracker's pattern memory, even cut short"), {notes});
+    const {rows, pat} = fit;
+    const sec = r => (rowTick[r] - rowTick[0]) / hz, mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+    if (fit.n < nrows) note(`too long for the pattern memory: cut at ${mmss(sec(fit.n))} of ${mmss(endTick / hz)}` +
+        (loopRow && loopRow >= fit.n ? ", and it loops to its start" : ""));
+    if (rows !== (opt.rows || 64)) note(`patterns of ${rows} rows (of ${opt.rows || 64} the song did not fit)`);
+    note(`patterns: ${pat.pool} of ${POOL_ROWS} rows of pattern memory, ${pat.nord} of ${MAX_ORD} order positions`);
+    Object.assign(song, pat, {rows});
     const out = writeSong(song);
     return {song: out, notes, info: {title: song.title, author: song.author, orders: song.nord, rows, instruments: song.ins.length,
-        patternRows: pat.pool, seconds: endTick / hz, loop: vgm.loop !== null, match}};
+        patternRows: pat.pool, seconds: (fit.n < nrows ? rowTick[fit.n] - rowTick[0] : endTick - rowTick[0]) / hz,
+        loop: vgm.loop !== null, cut: fit.n < nrows, match}};
 }
 
-function patterns(cells, nrows, rows, loopRow) {
-    const nord = Math.ceil(nrows / rows);
-    const col = cells.map(c => c.map(x => ({...x, fx: (x.fx || []).slice()})));
-    if (nrows % rows) {                                // the last pattern breaks early
-        const r = nrows - 1;
-        const free = col.find(c => c[r].fx.length < 2);
-        if (!free) return null;
-        free[r].fx.push([FX.BREAK, 0]);
+// the loop: what the effects leave on at the end of the first n rows must not run on into the loop row;
+// the cells with the effects that stop them added (a copy)
+function loopFix(cells, n, ticks, loopRow, macros) {
+    const out = cells.map(c => c.slice(0, n));
+    if (!loopRow || loopRow >= n) return out;
+    for (let ch = 0; ch < 10; ch++) {
+        const psg = ch >= CH_SQ1, m = psg ? macros : new Map();
+        const [atLoop] = simulate(new Chan(psg), out[ch].slice(0, loopRow), ticks.slice(0, loopRow), m);
+        const [atEnd] = simulate(new Chan(psg), out[ch], ticks.slice(0, n), m);
+        const cell = {...out[ch][loopRow]};
+        cell.fx = (cell.fx || []).slice();
+        if (atEnd.vibDepth && !atLoop.vibDepth && cell.fx.length < 2 && !cell.fx.some(([f]) => f === FX.VIBRATO)) cell.fx.push([FX.VIBRATO, 0]);
+        if (atEnd.slide && !atLoop.slide && cell.fx.length < 2 && !cell.fx.some(([f]) => f === FX.PORTA_UP || f === FX.PORTA_DN)) cell.fx.push([FX.PORTA_UP, 0]);
+        out[ch][loopRow] = cell;
     }
-    const order = Array.from({length: nord}, () => new Array(NCH).fill(0));
-    const pats = Array.from({length: NCH}, () => []);
-    let pool = 0;
-    for (let ch = 0; ch < col.length; ch++) {
-        const seen = new Map();
-        for (let o = 0; o < nord; o++) {
-            const part = col[ch].slice(o * rows, (o + 1) * rows);
-            while (part.length < rows) part.push({fx: []});
-            const key = JSON.stringify(part);
-            if (!seen.has(key)) {
-                seen.set(key, pats[ch].length);
-                pats[ch].push(part);
-                if (part.some(c => c.note || c.ins !== undefined || c.vol !== undefined || c.fx.length)) pool += rows;
+    return out;
+}
+
+// ------------------------------------------------------------ the patterns ---
+// Each order position plays a stretch of rows: a whole pattern, or, ended by a pattern break (0D00)
+// in one channel's last row, fewer. A channel's stretch shares a pattern with every other stretch of
+// the same cells. The stretches follow a grid of `rows` that restarts at anchors: row 0, the loop
+// row (so the loop is a position of its own), and rows chosen where restarting it shares more, as
+// where a part repeats out of step with the grid. The memory: POOL_ROWS rows in all the patterns
+// with a note, an instrument, a volume or an effect (empty ones take none), MAX_PAT patterns a
+// channel, MAX_ORD positions. When the song does not fit at the rows asked for, the other pattern
+// lengths are tried; when it fits at none, it is cut short.
+const P_HASH = 2147483647, P_BASE = 1000003;
+const mulmod = (a, b) => (Math.floor(a / 65536) * b % P_HASH * 65536 + (a % 65536) * b) % P_HASH;
+const cellKey = c => `${c.note || 0},${c.ins ?? -1},${c.vol ?? -1}` + (c.fx || []).map(([f, v]) => `,${f}:${v}`).join("");
+const isEmpty = c => !c.note && c.ins === undefined && c.vol === undefined && !(c.fx && c.fx.length);
+
+function layout(cells, nrows, ticks, loopRow, macros, want) {
+    // the cells as numbers, the same for the same cell
+    const ids = new Map(), id = k => { if (!ids.has(k)) ids.set(k, ids.size + 1); return ids.get(k); };
+    const EMPTY = id(cellKey({}));
+    const cid = cells.map(col => col.map(c => id(cellKey(c))));
+    const brk = cells.map(col => col.map(c => (c.fx || []).length < 2 ? id(cellKey({...c, fx: [...(c.fx || []), [FX.BREAK, 0]]})) : 0));
+    const pw = [1], E = [0];                           // E[k]: the hash of k empty rows
+    for (let k = 1; k <= MAX_ROWS; k++) { pw.push(mulmod(pw[k - 1], P_BASE)); E.push((mulmod(E[k - 1], P_BASE) + EMPTY) % P_HASH); }
+    const H = cid.map(col => { const h = [0]; for (const v of col) h.push((mulmod(h[h.length - 1], P_BASE) + v) % P_HASH); return h; });
+    const span = (ch, a, L) => (H[ch][a + L] - mulmod(H[ch][a], pw[L]) + P_HASH) % P_HASH;
+
+    // the cost of a layout, by hashes: {pool, nord, fits}, or null when a break finds no room
+    const cost = (R, n, anchors) => {
+        const seen = new Map(), npat = new Array(10).fill(0);
+        let pool = 0, nord = 0;
+        const use = (ch, h, empty) => {
+            const k = h * 16 + ch;
+            if (seen.has(k)) return 0;
+            seen.set(k, 1);
+            if (++npat[ch] > MAX_PAT) pool = Infinity;
+            return empty ? 0 : R;
+        };
+        const keys = new Array(10), empt = new Array(10);
+        for (let i = 0; i < anchors.length; i++) {
+            const end = Math.min(i + 1 < anchors.length ? anchors[i + 1] : n, n);
+            for (let a = anchors[i]; a < end; a += R) {
+                const L = Math.min(R, end - a);
+                nord++;
+                for (let ch = 0; ch < 10; ch++) {
+                    keys[ch] = (mulmod(span(ch, a, L), pw[R - L]) + E[R - L]) % P_HASH;
+                    empt[ch] = keys[ch] === E[R];
+                }
+                let holder = -1;
+                if (L < R) {                           // the break: in the channel where it costs least
+                    let best = Infinity;
+                    for (let ch = 0; ch < 10; ch++) {
+                        const b = brk[ch][a + L - 1];
+                        if (!b) continue;
+                        const kb = (mulmod((mulmod(span(ch, a, L - 1), P_BASE) + b) % P_HASH, pw[R - L]) + E[R - L]) % P_HASH;
+                        const c = (seen.has(kb * 16 + ch) ? 0 : R) - (seen.has(keys[ch] * 16 + ch) || empt[ch] ? 0 : R);
+                        if (c < best) { best = c; holder = ch; keys[10] = kb; }
+                    }
+                    if (holder < 0) return null;
+                }
+                for (let ch = 0; ch < 10; ch++) pool += ch === holder ? use(ch, keys[10], false) : use(ch, keys[ch], empt[ch]);
             }
-            order[o][ch] = seen.get(key);
         }
-        if (seen.size > MAX_PAT) return null;
+        return {pool, nord, fits: pool <= POOL_ROWS && nord <= MAX_ORD};
+    };
+
+    // anchors: 0 and the loop row, then, while it helps, the row whose restart saves the most
+    const better = (k, c) => !c || k.pool < c.pool || k.pool === c.pool && k.nord < c.nord;
+    const plan = (R, n, search) => {
+        const anchors = loopRow && loopRow < n ? [0, loopRow] : [0];
+        let c = cost(R, n, anchors);
+        if (search) {
+            // the rows worth a try: where a channel's next rows (not empty) come again elsewhere, out
+            // of step with the grid; the 256 where most channels do
+            const B = Math.min(R, 16), where = Array.from({length: 10}, () => new Map()), score = new Uint8Array(n);
+            for (let ch = 0; ch < 10; ch++)
+                for (let r = 0; r + B <= n; r++) {
+                    const h = span(ch, r, B);
+                    if (h === E[B]) continue;
+                    const w = where[ch].get(h);
+                    if (w === undefined) where[ch].set(h, r);
+                    else if ((r - w) % R && score[r] < 255) { score[r]++; if (w && score[w] < 255) score[w]++; }
+                }
+            const starts = [];
+            const swing = ticks[0] !== ticks[1];       // with swing, positions start on even rows, as play from one does
+            for (let r = 1; r < n; r++) if (score[r] && !(swing && r % 2)) starts.push(r);
+            starts.sort((x, y) => score[y] - score[x] || x - y).splice(256);
+            for (let round = 0; round < 32; round++) {
+                let best = null;
+                for (const r of starts) {
+                    if (anchors.includes(r)) continue;
+                    const t = [...anchors, r].sort((x, y) => x - y), k = cost(R, n, t);
+                    if (k && k.nord <= MAX_ORD && better(k, best && best.k)) best = {t, k};
+                }
+                if (!best || c && c.pool - best.k.pool < R) break;     // a restart must save at least a pattern
+                anchors.splice(0, anchors.length, ...best.t);
+                c = best.k;
+            }
+        }
+        return c && c.fits ? {anchors, ...c} : null;
+    };
+
+    const lengths = [want, ...[128, 64, 32, 16, 8].filter(R => R !== want && R <= MAX_ROWS)];
+    const tryAll = n => {
+        const ok = [];
+        for (const R of lengths) {
+            if (Math.ceil(n / R) > MAX_ORD + 32) continue;           // hopeless: anchors only add positions
+            const p = plan(R, n, n * 10 * 64 / R < 2e6);
+            if (p) { ok.push({R, ...p}); if (R === want) break; }
+        }
+        // the length asked for if it fits, else the one leaving the most memory free
+        return ok.find(p => p.R === want) || ok.sort((x, y) => x.pool - y.pool)[0] || null;
+    };
+    let n = nrows, best = tryAll(n);
+    if (!best) {                                      // too long at any length: the longest start that fits
+        let lo = 2, hi = nrows;
+        const fits = m => lengths.some(R => Math.ceil(m / R) <= MAX_ORD && plan(R, m, false));
+        if (!fits(lo)) return null;
+        while (lo < hi) { const m = (lo + hi + 1 >> 1) & ~1 || 2; if (m <= lo) break; if (fits(m)) lo = m; else hi = m - 1; }
+        lo = lo & ~1 || 2;
+        // the restarts fit more: at each length that fits so far, further (a few halvings); the
+        // length that goes furthest, the one asked for among equals
+        best = null;
+        for (const R of lengths) {
+            let m0 = lo, p0 = Math.ceil(lo / R) <= MAX_ORD + 32 && plan(R, lo, lo * 10 * 64 / R < 2e6);
+            if (!p0) continue;
+            for (let hi2 = nrows, step = 0; step < 7 && hi2 - m0 > 2 * R; step++) {
+                const m = (m0 + hi2 >> 1) & ~1, p = plan(R, m, true);
+                if (p) { m0 = m; p0 = p; } else hi2 = m;
+            }
+            if (!best || m0 > n) { n = m0; best = {R, ...p0}; }
+        }
+        if (!best) return null;
     }
-    if (pool > POOL_ROWS) return null;
-    return {nord, order, pats, pool};
+    // by the cells themselves; should the effects the loop needs (or a hash's collision) not fit, shorter
+    for (let tries = 0; tries < 8 && best; tries++) {
+        const pat = build(loopFix(cells, n, ticks, loopRow, macros), n, best.R, best.anchors, loopRow);
+        if (pat) return {rows: best.R, n, pat};
+        n = Math.max(2, n - 2 * best.R) & ~1;
+        best = tryAll(n);
+    }
+    return null;
+}
+
+// the patterns of a layout, by the cells themselves (the hashes only chose it)
+function build(cells, n, R, anchors, loopRow) {
+    const order = [], pats = Array.from({length: NCH}, () => []), seen = Array.from({length: 10}, () => new Map());
+    let pool = 0, loop = 0;
+    const blank = () => ({fx: []});
+    const add = (ch, part) => {
+        const key = part.map(cellKey).join("|");
+        if (!seen[ch].has(key)) {
+            seen[ch].set(key, pats[ch].length);
+            pats[ch].push(part);
+            if (part.some(c => !isEmpty(c))) pool += R;
+        }
+        return seen[ch].get(key);
+    };
+    for (let i = 0; i < anchors.length; i++) {
+        const end = Math.min(i + 1 < anchors.length ? anchors[i + 1] : n, n);
+        for (let a = anchors[i]; a < end; a += R) {
+            const L = Math.min(R, end - a);
+            if (a === loopRow) loop = order.length;
+            const parts = cells.map(col => {
+                const part = col.slice(a, a + L).map(c => ({...c, fx: (c.fx || []).slice()}));
+                while (part.length < R) part.push(blank());
+                return part;
+            });
+            let holder = -1;
+            if (L < R) {
+                let best = Infinity;
+                for (let ch = 0; ch < 10; ch++) {
+                    if (parts[ch][L - 1].fx.length >= 2) continue;
+                    const withBrk = parts[ch].map((c, r) => r === L - 1 ? {...c, fx: [...c.fx, [FX.BREAK, 0]]} : c);
+                    const has = p => seen[ch].has(p.map(cellKey).join("|"));
+                    const c = (has(withBrk) ? 0 : R) - (has(parts[ch]) || parts[ch].every(isEmpty) ? 0 : R);
+                    if (c < best) { best = c; holder = ch; }
+                }
+                if (holder < 0) return null;
+                parts[holder][L - 1].fx.push([FX.BREAK, 0]);
+            }
+            const row = new Array(NCH).fill(0);
+            for (let ch = 0; ch < 10; ch++) row[ch] = add(ch, parts[ch]);
+            order.push(row);
+        }
+    }
+    if (order.length > MAX_ORD || pool > POOL_ROWS || seen.some(m => m.size > MAX_PAT)) return null;
+    return {nord: order.length, order, pats, pool, loop};
 }
 
 // ------------------------------------------------------------ the stream ---

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fuzzing the editor's VGM import (web/vgmimport.js) and what it makes, in the editor's engine
-// (web/fm1trax.wasm): damaged copies of a real VGM and random register logs for both chips. Each
+// (web/fm1trax.wasm): damaged copies of a real VGM, long ones made from it, and random register logs
+// for both chips. Each
 // import must either refuse the file with an Error or make a song the engine reads; each song is
-// played for a few seconds, and its output must stay inside the clip (|v| <= 1) with the safety net
+// played for a few seconds (from the start or a position at random), and its output must stay inside the clip (|v| <= 1) with the safety net
 // never going off. Run from the repo root:  node tests/web_fuzz_test.mjs [SEEDS]
 import {readFileSync} from "node:fs";
 import {importVgm} from "../web/vgmimport.js";
@@ -59,11 +60,46 @@ function damaged() {
     return b;
 }
 
-let refused = 0, made = 0, worst = 0, fails = 0, secs = 0;
+// a long one: the real VGM's log 2-4 times over, with frames of silence put in at random (between the
+// copies, and now and then inside), so that its notes keep to no grid and its repeats fall out of step:
+// the row grid for a log with no tracker's timing, the pattern packing and the cut for a song too long
+function longVgm() {
+    const dv = new DataView(base.buffer, base.byteOffset), ver = dv.getUint32(8, true);
+    const off = ver < 0x150 ? 0x40 : 0x34 + dv.getUint32(0x34, true);
+    const len = {0x4F: 2, 0x50: 2, 0x52: 3, 0x53: 3, 0x61: 3, 0x62: 1, 0x63: 1, 0x90: 5, 0x91: 5, 0x92: 6, 0x93: 11, 0x94: 2, 0x95: 5, 0xE0: 5};
+    const pre = [], cmds = [];
+    for (let i = off; i < base.length && base[i] !== 0x66;) {
+        const c = base[i];
+        const n = c === 0x67 ? 7 + dv.getUint32(i + 3, true) : c >= 0x70 && c <= 0x8F ? 1 : len[c];
+        if (!n) break;
+        (c === 0x67 ? pre : cmds).push(base.subarray(i, i + n));
+        i += n;
+    }
+    const body = [];
+    const copies = 2 + rn(3), jitter = rn(3) ? 400 + rn(2000) : 0;
+    for (let k = 0; k < copies; k++) {
+        for (let g = rn(14); g > 0; g--) body.push(Uint8Array.of(0x62));
+        for (const c of cmds) {
+            if (jitter && rn(jitter) === 0) body.push(Uint8Array.of(0x62));
+            body.push(c);
+        }
+    }
+    const parts = [base.subarray(0, off), ...pre, ...body, Uint8Array.of(0x66)];
+    const out = new Uint8Array(parts.reduce((a, p) => a + p.length, 0));
+    let o = 0;
+    for (const p of parts) { out.set(p, o); o += p.length; }
+    const ov = new DataView(out.buffer);
+    ov.setUint32(4, out.length - 4, true);
+    ov.setUint32(0x14, 0, true);                       // no tag
+    ov.setUint32(0x1C, rn(2) ? 0 : (off + pre.reduce((a, p) => a + p.length, 0) + rn(body.length >> 3)) - 0x1C, true);
+    return out;
+}
+
+let refused = 0, made = 0, worst = 0, fails = 0, secs = 0, longs = 0;
 const trips0 = x.web_guard_trips();
 for (let s = 1; s <= seeds; s++) {
     r = (0x9E3779B9 * s | 1) >>> 0;
-    const vgm = s % 3 ? damaged() : randomVgm();
+    const vgm = s % 10 === 5 ? longVgm() : s % 3 ? damaged() : randomVgm();
     let out;
     const t0 = Date.now();
     try {
@@ -77,7 +113,10 @@ for (let s = 1; s <= seeds; s++) {
     new Uint8Array(x.memory.buffer, x.web_io(), out.song.length).set(out.song);
     if (x.web_song_read(out.song.length) !== 0) { fails++; console.log(`FAIL seed ${s}: the engine does not read the import`); continue; }
     made++;
-    x.web_post(0, 0, 0, 0);
+    if (out.info.patternRows > 16384 || out.info.orders > 256) { fails++; console.log(`FAIL seed ${s}: past the pattern memory`); }
+    if (s % 10 === 5) longs++;
+    // from the start, or (half the time) from a position at random: a break, the loop
+    x.web_post(0, rn(2) ? 0 : rn(out.info.orders), 0, 0);
     for (let k = 0; k < 40; k++) {                       // ~3.7 s
         const m = x.web_render(4096), a = new Float32Array(x.memory.buffer, x.web_audio_buf(), m * 2);
         for (const v of a) {
@@ -91,5 +130,5 @@ for (let s = 1; s <= seeds; s++) {
 }
 const trips = x.web_guard_trips() - trips0;
 if (trips) { fails++; console.log(`FAIL the safety net went off ${trips} times`); }
-console.log(`${seeds} VGMs: ${refused} refused, ${made} imported and played (${secs.toFixed(0)} s), loudest ${(20 * Math.log10(worst + 1e-9)).toFixed(1)} dBFS`);
+console.log(`${seeds} VGMs: ${refused} refused, ${made} imported and played (${longs} long ones) (${secs.toFixed(0)} s), loudest ${(20 * Math.log10(worst + 1e-9)).toFixed(1)} dBFS`);
 if (fails) { console.log(`${fails} failures`); process.exit(1); }

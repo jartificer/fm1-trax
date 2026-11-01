@@ -327,11 +327,17 @@ branch holds `web/`'s files at its root):
   DAC data block, loop) and `.wav`; import instruments, later Deflemask `.dmf` songs.
 - **VGM import** (`web/vgmimport.js`, also `tools/vgm2fm1d.mjs` on the command line, which made the
   demo song): a Mega Drive VGM becomes a song by replaying its register log and fitting the tracker
-  to it. The row grid (speed and swing) is the coarsest that the note starts keep to; each key-on is
+  to it. The row grid (speed and swing) is the coarsest that the note starts keep to; for a log
+  with no tracker's timing (a sound driver, note delays, speed changes), the coarsest on which
+  next to no channel has two notes in a row, the notes off it delayed (EDxx) to their tick; each key-on is
   a note with its patch as an instrument (alike patches shared) and its carriers' level as the
   volume; each PSG envelope is a note with a volume macro; slides and vibrato are chosen row by row
-  by running the player's own pitch model against the log's pitches; repeated patterns are stored
-  once; the loop point becomes the song's loop. The VGM's DAC samples are played by the kit drum
+  by running the player's own pitch model against the log's pitches; the loop point becomes the
+  song's loop, an order position of its own. Repeated patterns are stored once: the pattern grid
+  restarts (the position before ended early by a pattern break, 0D00) where that lets more of the
+  song's repeats share a pattern, and the pattern length is the one asked for (64) or, when the
+  song does not fit at it, the one leaving the most pattern memory; a song too long at any
+  length is cut, with a note saying where. The VGM's DAC samples are played by the kit drum
   most like each (the song has no room for samples), and other chips' commands are skipped.
 
 ## 8. Stages
