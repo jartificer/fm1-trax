@@ -1,0 +1,70 @@
+# the Songs view: a song saved to slot 0, deleted with LFO held twice (this froze and rebooted the
+# FM-1: the delete programmed flash from a const in XIP flash), and the demo song back with FX
+wait 300
+tap HOME
+expect nord 35
+tap GLO
+wait 200
+expect view 6
+tap SAVE
+wait 200
+expect slotused0 1
+expect dirty 0
+hold LFO 900
+wait 100
+hold LFO 900
+wait 200
+expect slotused0 0
+expect dirty 1
+shot deleted.png
+# nothing saved: a reboot plays the demo again
+reboot
+wait 300
+tap HOME
+expect slotused0 0
+expect nord 35
+expect dirty 0
+# a changed song saved over slot 0: FX in Songs brings the demo back (asking first when unsaved)
+tap REC
+tapkey 0
+tap REC
+expect note0.0 42
+expect dirty 1
+tap GLO
+wait 200
+tap SAVE
+wait 200
+expect slotused0 1
+expect dirty 0
+tap HOME
+tap REC
+tapkey 2
+tap REC
+expect dirty 1
+tap GLO
+wait 200
+tap FX
+wait 100
+expect view 6
+tap FX
+wait 200
+expect view 0
+expect nord 35
+expect note0.0 !42
+expect dirty 0
+expect song 0
+expect slotused0 1
+shot demo_back.png
+# saved, it replaces slot 0; the old song is gone, the demo plays
+tap SAVE
+wait 200
+reboot
+wait 300
+tap HOME
+expect slotused0 1
+expect nord 35
+expect note0.0 !42
+tap PLAY
+wait 600
+expect playing 1
+expect level >3

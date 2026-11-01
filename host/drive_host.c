@@ -20,7 +20,7 @@
  *   peakreset                    restart the output peak (expect peak_db_min / peak_db_max)
  *   shot FILE.png                save the screen
  *   leds                         print the lit buttons and keys
- *   expect WHAT VALUE            check state: exit 1 on mismatch; VALUE "<N" / ">N" is a bound
+ *   expect WHAT VALUE            check state: exit 1 on mismatch; VALUE "<N" / ">N" is a bound, "!N" not N
  *   reboot                       re-run boot from the simulated flash (persistence test)
  *   sysex HEX ..                 a SysEx message to the link (the bytes between F0 and F7); the
  *                                answer is printed (expect sxst: its status)
@@ -153,6 +153,7 @@ void plat_midi_out(uint32_t pkt)
 
 /* flash: a simulated NOR (erase -> 0xFF, programming clears bits), kept across a simulated reboot,
  * under the firmware's own storage.c */
+#include "ro_mem.h"
 static uint8_t nor[0x100000];
 static uint32_t store_writes;                    /* sectors erased: one a save of an object, or a song's sector */
 static const uint8_t flash_ok = 1;
@@ -169,6 +170,10 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
     uint32_t i;
     if ((off & 0xFFu) + n > 256u) {
         fprintf(stderr, "flash: a program crosses a page at %#x\n", off);
+        exit(1);
+    }
+    if (ro_mem(src)) {
+        fprintf(stderr, "flash: a program at %#x from read-only memory (the device's XIP flash)\n", off);
         exit(1);
     }
     for (i = 0; i < n; i++)
@@ -631,6 +636,14 @@ static int expect(const char *what, const char *val)
     if (val[0] == '<' || val[0] == '>') {
         int lim = (int)strtol(val + 1, 0, 0);
         if (val[0] == '<' ? got >= lim : got <= lim) {
+            printf("FAIL expect %s %s, got %d\n", what, val, got);
+            return 1;
+        }
+        printf("  ok %s == %d (%s)\n", what, got, val);
+        return 0;
+    }
+    if (val[0] == '!') {
+        if (got == (int)strtol(val + 1, 0, 0)) {
             printf("FAIL expect %s %s, got %d\n", what, val, got);
             return 1;
         }

@@ -966,7 +966,7 @@ static void songs_input(void)
         ui.sl_pos = clampi(ui.sl_pos + d, 0, NSLOTS - 1);
     if (pressed(B_SEL)) {                      /* load */
         if (!slot_info[ui.sl_pos].used) {
-            ui_say("EMPTY SLOT", "ENV: NEW SONG HERE");
+            ui_say("EMPTY SLOT", "ENV NEW  FX DEMO");
         } else if (!ui.dirty || confirm(1, "UNSAVED CHANGES", "SEL AGAIN: LOAD")) {
             int rc;
             player_post(PC_STOP, 0, 0, 0);
@@ -989,6 +989,17 @@ static void songs_input(void)
         settings_save();
         song_loaded();
         ui_say("NEW SONG", "SAVE TO KEEP IT");
+        go(V_PAT);
+    }
+    if (pressed(B_FX) && (!ui.dirty || confirm(5, "UNSAVED CHANGES", "FX AGAIN: DEMO"))) {
+        player_post(PC_STOP, 0, 0, 0);         /* the demo song back, as a new song for this slot */
+        lock();
+        demo_song(&song);
+        unlock();
+        set.song = (uint8_t)ui.sl_pos;
+        settings_save();
+        song_loaded();
+        ui_say("DEMO SONG", "SAVE TO KEEP IT");
         go(V_PAT);
     }
     if (pressed(B_SAVE)) {

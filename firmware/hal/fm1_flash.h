@@ -236,16 +236,20 @@ static int fl_erase4k(uint32_t off, uint32_t *took_us)
     return rc;
 }
 
+/* The source is copied to RAM first: fl_prog_ram reads it with the flash out of XIP mode, so a
+ * source in the XIP flash (a const, a string) would stall the CPU until the watchdog resets it. */
+static uint8_t fl_bounce[256] __attribute__((aligned(4)));
 static int fl_write(uint32_t off, const uint8_t *src_ram, uint32_t n)
 {
     uint32_t took;
     while (n) {
         uint32_t chunk = 256u - (off & 0xFFu);
         int rc;
-        uint32_t f;
+        uint32_t f, i;
         if (chunk > n) chunk = n;
+        for (i = 0; i < chunk; i++) fl_bounce[i] = src_ram[i];
         f = irq_save();
-        rc = FL_FAR(fl_prog_ram)(off, src_ram, chunk, &took);
+        rc = FL_FAR(fl_prog_ram)(off, fl_bounce, chunk, &took);
         irq_restore(f);
         if (rc) return rc;
         off += chunk; src_ram += chunk; n -= chunk;
