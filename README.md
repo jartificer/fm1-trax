@@ -9,6 +9,8 @@ Furnace, played from the FM-1's own keys and knobs. (FM1-TRAX was called FM1-DRI
 > simulator (`tests/run_tests.sh`), and the firmware has been tested on a real FM-1. The firmware comes
 > with no warranty: see [No warranty](#no-warranty) before you install it.
 
+![Various views of the FM1TRAX firmware, with the intro screen at the center](docs/fm1trax-collage.png)
+
 ## What it does
 
 - **The real chips, limits included.** 6 FM channels with 4 operators each, the 8 algorithms,
