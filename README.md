@@ -73,7 +73,18 @@ for Windows, macOS and Linux, and `tools/make_bundle.sh` packs it with the firmw
 into one zip.
 
 This works from the stock firmware or any Felucca-based firmware (FM1-GM, X0X, FoMni). To go back,
-install M-VAVE's stock package the same way, or with M-VAVE's updater.
+install M-VAVE's stock package the same way, or with M-VAVE's updater. The installers take M-VAVE's
+official V15 and V16 files (`FM-1.fwsc` from m-vave.com/download) unchanged, over either version's boot
+area.
+
+**Tested with M-VAVE's V15 and V16.** On a real FM-1 (8 November 2026), FM1-TRAX was installed from V15,
+then V16 over it, then FM1-TRAX over V16, then V16 again: every install finished, with the screen and
+sound as expected each time.
+
+**Newer FM-1s.** FM-1s sold since autumn 2026 (the logo on the front) have another flash chip, a UCUN
+UC25HQ80 in place of the Puya P25Q80H, and usually come with V16. FM1-TRAX supports both chips, so it
+should work on these units too. The new chip has been tested in the simulator only so far, not yet on
+such a unit.
 
 FM1-TRAX keeps its songs and instruments in its own format. It **cannot read the projects, patterns,
 presets or samples of other firmwares** (the stock firmware or other custom firmwares), and its song
@@ -92,7 +103,7 @@ reach it otherwise.
 
 After two failed starts in a row the firmware comes up in a safe mode with USB on and no audio, so an
 installer can reach it; PLAY tries the firmware again. After four, it enters the chip's own update
-mode, the last resort: `tools/fm1_rescue.py` writes the stock firmware back through it (see the
+mode, the last resort: `tools/fm1_rescue.py` writes the stock firmware (V15, or V16 on an FM-1 that has V16's boot area) back through it (see the
 script's header and [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter)).
 
 ## Emulator and editor
