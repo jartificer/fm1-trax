@@ -8,6 +8,11 @@ Any machine with a C compiler and Python 3 with Pillow (for the font header):
 tests/run_tests.sh [WAVDIR]
 ```
 
+M-VAVE's official packages are not in the repository. With them in a folder,
+`FM1_STOCK_DIR=folder tests/run_tests.sh` also checks the updater's pins (`firmware/src/ota.c` OTA_STOCK,
+the installers' OFFICIAL) against the real V15 / V16 files, the return to stock over each boot area
+(`tests/ota_test.c`, `tests/rescue_test.py`), and FM1-TRAX's loader over V16's boot area (`tests/ldr_test.c`).
+
 This builds and runs:
 
 - `tests/host/engine_test.c`: the YM2612, PSG and mixer. When it can be downloaded, the YM2612 is

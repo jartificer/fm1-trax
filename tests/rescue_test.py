@@ -65,6 +65,24 @@ def main():
             ok(False, "V16's bootloader, only V15 given: refused")
         except R.Fail:
             ok(dev.writes == 0, "V16's bootloader, only V15 given: refused, nothing written")
+    # the real files, when FM1_STOCK_DIR has them: each written back over its own boot area, on both chips
+    d = os.environ.get("FM1_STOCK_DIR")
+    real = []
+    for f in sorted(os.listdir(d)) if d else []:
+        if f.endswith(".fwsc"):
+            raw = open(os.path.join(d, f), "rb").read()
+            name = R.STOCK.get(__import__("hashlib").sha256(raw).hexdigest())
+            if name:
+                real.append((name, R.package_flash_image(raw)))
+    with tempfile.TemporaryDirectory() as tmp:
+        for fid in (0x856014, 0xB36014) if real else ():
+            for name, im in real:
+                flash = unit(im)
+                dev = FakeUboot(fid, flash)
+                done = R.rescue(dev, real, b"", True, tmp, say=quiet)
+                ok(done and dev.flash[:len(im)] == im and dev.flash[len(im):] == flash[len(im):],
+                   f"{fid:06X}, the real {name} ({len(im):#x} B) over its own boot area: written, data above kept")
+
     return 1 if bad else 0
 
 
