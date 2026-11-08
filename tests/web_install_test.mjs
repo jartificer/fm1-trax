@@ -205,6 +205,29 @@ async function attempt(dev, pkg) {
     ok(r.code === "open" && dev.arms.length === 0 && dev.upgrades === 0, "Open -> one of ours: refused, nothing sent (stock first)");
 }
 
+{   // back to M-VAVE's official V15 or V16 from FM1-TRAX: the exact files only
+    const v16Raw = makePackage("FM-1_016", false), real = I.OFFICIAL["FM-1_016"];
+    I.OFFICIAL["FM-1_016"] = createHash("sha256").update(v16Raw).digest("hex");   // stand-in for the real V16
+    try {
+        const v16 = await I.loadPackage(v16Raw);
+        const dev = new FakeFM1(v16.image, {identity: "FM-1_601", afterWrite: "FM-1_016"}), r = await attempt(dev, v16);
+        ok(r.code === 0 && dev.bad === 0, "FM1-TRAX -> stock V16, no force needed");
+        const changed = v16Raw.slice();
+        changed[changed.length - 1] ^= 1;
+        let code = null;
+        try { await I.loadPackage(changed); } catch (e) { code = e.code; }
+        ok(code === "badpkg", "a changed V16 -> 'badpkg'");
+    } finally { I.OFFICIAL["FM-1_016"] = real; }
+    ok(I.OFFICIAL["FM-1_015"] === "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a"
+        && I.OFFICIAL["FM-1_016"] === "d017fb65e70aca97ee29d944470c3515a74581df5c0576bf70de917c7b2b61d5",
+        "the stock packages' SHA-256: V15 and V16");
+    const dir = process.env.FM1_STOCK_DIR;
+    if (dir) for (const f of (await import("node:fs")).readdirSync(dir).filter(n => n.endsWith(".fwsc")).sort()) {
+        const raw = readFileSync(`${dir}/${f}`), pkg = await I.loadPackage(raw);
+        ok(I.OFFICIAL[pkg.product] === pkg.digest && !pkg.loader, `${f}: ${pkg.product} is pinned, loads without force`);
+    }
+}
+
 if (existsSync("web/fm1trax.fwsc")) {
     const pkg = await I.loadPackage(readFileSync("web/fm1trax.fwsc"));
     ok(pkg.product.startsWith("FM-1_601") && pkg.loader, `web/fm1trax.fwsc: ${pkg.product}, with the Felucca loader`);

@@ -3,7 +3,9 @@
 /* Host test of firmware/src/ota.c: a fake M-UPGRADE serves a real .fwsc over
  * the SysEx protocol (pack7, cmd 0x30 reads, 0xE0000000 -> "success") and a
  * simulated NOR plays the flash.
- *   cc -o ota_test tests/ota_test.c && ./ota_test FILE.fwsc
+ *   cc -o ota_test tests/ota_test.c && ./ota_test FILE.fwsc [OFFICIAL.fwsc ...]
+ * With M-VAVE's official packages (V15, V16: FM-1.fwsc) as further arguments it also checks the
+ * OTA_STOCK pins against them and the return to stock over each boot area.
  */
 #include <stdint.h>
 #include <stdio.h>
@@ -12,6 +14,7 @@
 
 #define FELUCCA_ID "FM-1_900"
 #define FELUCCA_OTA_DRYRUN 0
+#define OTA_STOCK_CONST                          /* writable: the tests change a pin */
 
 static uint8_t nor[0x100000];
 static uint8_t *logical;
@@ -23,6 +26,7 @@ static int committed;
 static uint8_t committed_parm[112];
 static int32_t last_code;
 static uint8_t *corrupt_at;              /* flip a served byte (loader body) */
+static uint8_t dev_head[0x4000];         /* the device's boot area, copied into nor by reset_dev */
 
 static uint32_t pack7(const uint8_t *in, uint32_t n, uint8_t *out)
 {
@@ -145,27 +149,146 @@ static int area_erased(void)
 static void reset_dev(void)
 {
     memset(nor, 0xFF, sizeof nor);
-    memcpy(nor, logical + 0x400, 0x4000);                 /* device flash head = package flash.bin head */
+    memcpy(nor, dev_head, 0x4000);                        /* the device's boot area */
     rx_full = 0; requests = 0; ident_replies = 0; committed = 0; last_code = 0;
     mute_after = 0xFFFFFFFFu; corrupt_at = NULL; bad_erase = 0;
 }
 
-int main(int argc, char **argv)
+static size_t load(const char *path)            /* -> logical, logical_len; 0 on error */
 {
-    FILE *f;
+    FILE *f = fopen(path, "rb");
     uint8_t *raw;
     size_t n, i;
-    int bad = 0, rc;
-    if (argc < 2) { printf("usage: ota_test FILE.fwsc\n"); return 2; }
-    f = fopen(argv[1], "rb");
-    if (!f) { perror(argv[1]); return 2; }
+    if (!f) { perror(path); return 0; }
     raw = malloc(0x200000);
     n = fread(raw, 1, 0x200000, f);
     fclose(f);
+    free(logical);
     logical = malloc(n);
     for (i = 0; i < 20; i++) memcpy(logical + i * 47, raw + i * 48, 47);   /* drop the marker bytes */
     memcpy(logical + 20 * 47, raw + 20 * 48, n - 20 * 48);
     logical_len = n - 20;
+    free(raw);
+    return n;
+}
+
+static int run(void)                            /* one session -> its code, 0 = committed */
+{
+    reset_dev();
+    return ota_session();
+}
+
+/* M-VAVE's official package: its pin, and the return to stock over its own boot area, another one
+ * (FM1-TRAX's package head stands in for V15's, V16's or m-bootloader's) and with a changed boot area */
+static int official(const char *path, const uint8_t *other_head)
+{
+    uint8_t hdr[0x400], own[0x4000];
+    uint32_t fl_off, fl_len, fl_crc = 0, i, k, sha[8], key0;
+    uint16_t crc0;
+    int bad = 0, rc;
+    char what[96];
+    const char *name = strrchr(path, '/') ? strrchr(path, '/') + 1 : path;
+    if (!load(path)) return 1;
+    memcpy(hdr, logical, sizeof hdr);                  /* the UFW header and entries, as ota_ufw reads them */
+    ota_jl_enc(hdr, 0x40);
+    fl_off = fl_len = 0;
+    for (i = 0; i < ota_rd16(hdr + 8) && i < 11u; i++) {
+        uint8_t *e = hdr + 0x40 + i * 0x50u;
+        ota_jl_enc(e, 0x50);
+        if (ota_rd16(e) == 0) { fl_off = ota_rd32(e + 8); fl_len = ota_rd32(e + 12); fl_crc = ota_rd16(e + 4); }
+    }
+    if (!fl_off || fl_off + fl_len > logical_len) { printf("%s: not a package\n", name); return 1; }
+    for (k = 0; k < sizeof OTA_STOCK / sizeof OTA_STOCK[0]; k++)
+        if (OTA_STOCK[k].fl_len == fl_len) break;
+    snprintf(what, sizeof what, "%s: flash.bin size %#x is pinned", name, fl_len);
+    if (check(what, k < sizeof OTA_STOCK / sizeof OTA_STOCK[0])) return 1;
+    snprintf(what, sizeof what, "%s: flash.bin data CRC %04x == pin", name, fl_crc);
+    bad += check(what, fl_crc == OTA_STOCK[k].fl_crc && ota_crc16(logical + fl_off, fl_len, 0) == fl_crc);
+    ota_sha256_init(sha);
+    for (i = 0; i < OTA_HEAD_LEN; i += 64u) ota_sha256_block(sha, logical + fl_off + i);
+    snprintf(what, sizeof what, "%s: boot area SHA-256 == pin", name);
+    bad += check(what, ota_sha256_is(sha, OTA_HEAD_LEN, OTA_STOCK[k].head_sha256));
+    memcpy(own, logical + fl_off, sizeof own);
+
+    memcpy(dev_head, own, sizeof dev_head);
+    rc = run();
+    snprintf(what, sizeof what, "%s: over its own boot area -> staged", name);
+    bad += check(what, rc == 0 && committed && bad_erase == 0);
+    bad += check("  staged body == its official loader", !memcmp(nor + 0xE0020, logical + ota_body_off(), 64));
+
+    memcpy(dev_head, other_head, sizeof dev_head);
+    rc = run();
+    snprintf(what, sizeof what, "%s: over another boot area -> staged", name);
+    bad += check(what, rc == 0 && committed && bad_erase == 0);
+
+    memcpy(dev_head, other_head, sizeof dev_head);
+    reset_dev();
+    corrupt_at = logical + fl_off + 0x1000;            /* one byte of the SPL, as served */
+    rc = ota_session();
+    snprintf(what, sizeof what, "%s: boot area changed -> -5, area clean", name);
+    bad += check(what, rc == -5 && !committed && area_erased());
+
+    memcpy(dev_head, own, sizeof dev_head);
+    reset_dev();
+    corrupt_at = logical + fl_off + 0x1000;            /* changed, and no longer the device's own either */
+    rc = ota_session();
+    bad += check("  same, over its own boot area -> -5", rc == -5 && !committed && area_erased());
+
+    crc0 = OTA_STOCK[k].fl_crc;
+    OTA_STOCK[k].fl_crc ^= 0x0101u;                    /* an image that is not a reviewed one */
+    rc = run();
+    OTA_STOCK[k].fl_crc = crc0;
+    bad += check("  flash.bin not pinned -> -5", rc == -5 && !committed && area_erased());
+
+    key0 = OTA_STOCK[k].key;
+    OTA_STOCK[k].key = 0x1234u;                        /* a chip with another key */
+    memcpy(dev_head, own, sizeof dev_head);
+    rc = run();
+    OTA_STOCK[k].key = (uint16_t)key0;
+    bad += check("  another chip key -> -16", rc == -16 && !committed && area_erased());
+    {
+        uint32_t key = 0;
+        memcpy(dev_head, own, sizeof dev_head);
+        reset_dev();
+        snprintf(what, sizeof what, "  its boot area's chip key is %04X", 0x980Fu);
+        bad += check(what, ota_chip_key(&key) == 0 && key == 0x980Fu);
+    }
+    return bad;
+}
+
+int main(int argc, char **argv)
+{
+    int bad = 0, rc, a;
+    static uint8_t pkg_head[0x4000];
+    if (argc < 2) { printf("usage: ota_test FILE.fwsc [OFFICIAL.fwsc ...]\n"); return 2; }
+    if (!load(argv[1])) return 2;
+    memcpy(dev_head, logical + 0x400, 0x4000);         /* device flash head = package flash.bin head */
+    memcpy(pkg_head, dev_head, sizeof pkg_head);
+
+    {   /* the updater's SHA-256 (the boot-area pins) against known digests, without M-VAVE's files */
+        static const uint8_t EMPTY[32] = {0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8,
+            0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78,
+            0x52, 0xb8, 0x55};
+        static const uint8_t PAT[32] = {0xab, 0x57, 0x1d, 0x12, 0x46, 0x6f, 0x75, 0xae, 0x48, 0x1b, 0xdb, 0xbb,
+            0xfe, 0xc7, 0x0a, 0x0c, 0x53, 0xbf, 0x78, 0xe2, 0x84, 0x98, 0x62, 0xad, 0xdf, 0xa9, 0xa0, 0x49, 0xd8,
+            0xf6, 0xfb, 0xc0};                         /* 16 KiB of (i * 7 + 3) & 0xFF (Python's hashlib) */
+        static uint8_t buf[0x4000];
+        uint32_t sha[8], i;
+        int ok1, ok2, ok3;
+        ota_sha256_init(sha);
+        ok1 = ota_sha256_is(sha, 0, EMPTY);
+        for (i = 0; i < sizeof buf; i++) buf[i] = (uint8_t)(i * 7u + 3u);
+        ota_sha256_init(sha);
+        for (i = 0; i < sizeof buf; i += 64u) ota_sha256_block(sha, buf + i);
+        ok2 = ota_sha256_is(sha, sizeof buf, PAT);
+        buf[0x2345] ^= 1u;                              /* one bit changed: another digest */
+        ota_sha256_init(sha);
+        for (i = 0; i < sizeof buf; i += 64u) ota_sha256_block(sha, buf + i);
+        ok3 = !ota_sha256_is(sha, sizeof buf, PAT);
+        bad += check("SHA-256: empty message", ok1);
+        bad += check("SHA-256: 16 KiB boot area == hashlib", ok2);
+        bad += check("SHA-256: one bit changed -> no match", ok3);
+    }
 
     /* handshake outside a session */
     reset_dev();
@@ -217,6 +340,10 @@ int main(int argc, char **argv)
         rc = ota_session();
         bad += check("no 'success' -> -13, no commit, area clean", rc == -13 && !committed && area_erased());
     }
+
+    /* M-VAVE's official packages, when given */
+    for (a = 2; a < argc; a++)
+        bad += official(argv[a], pkg_head);
 
     printf("%s\n", bad ? "OTA TEST FAILED" : "ota test passed");
     return bad != 0;
