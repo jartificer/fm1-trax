@@ -33,6 +33,11 @@ FM1-TRAX knows both flash chips the FM-1 has shipped with: the Puya P25Q80H of t
 and the UCUN UC25HQ80 of FM-1s sold since autumn 2026 (logo on the front). On a unit with any other
 flash it still plays, but nothing is saved and it cannot be updated from FM1-TRAX itself.
 
+Tested on a real FM-1 (first flash chip) on 8 November 2026: FM1-TRAX, then M-VAVE's V16, then FM1-TRAX,
+then V16 again, each install finished, with screen and sound as expected. So V16's own updater takes
+FM1-TRAX, FM1-TRAX runs on V16's boot area, and going back to stock works over either boot area. The
+newer flash chip is tested only in the simulator so far.
+
 ## Windows
 
 1. Install Python 3.12 from https://www.python.org/downloads/ (tick "Add python.exe to PATH").
