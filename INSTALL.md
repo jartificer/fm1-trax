@@ -109,7 +109,9 @@ The FM1-TRAX web page has the same installer, over Web MIDI, in Chrome, Edge or 
 ## Going back to the stock firmware
 
 Install M-VAVE's stock package the same way (`fm1_install.py FM-1.fwsc`), or use M-VAVE's own updater.
-Both V15 and V16 are taken, but each brings its own bootloader, and an FM-1 takes only the version whose
-bootloader it already has: one that has ever run V16 goes back to V16, one that never has to V15. Install
-the other one and nothing is written; the installer says which one to use.
+The installers take M-VAVE's official V15 and V16 files (`FM-1.fwsc`) unchanged, and FM1-TRAX checks
+them again on the FM-1 before anything is written: their update loader rewrites the FM-1's boot area too,
+so only these two reviewed images go through, whichever boot area the FM-1 has now. Going to stock
+erases FM1-TRAX's songs and library (V16's larger app area covers part of them): save them to the
+computer with the editor first.
 The installer works from the stock firmware and from any Felucca-based firmware (FM1-GM, X0X, FoMni).

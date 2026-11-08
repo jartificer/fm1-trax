@@ -49,8 +49,7 @@ class FakeLink {
 class FakeFM1 {
     constructor(image, o = {}) {
         Object.assign(this, {image, unplugAfter: o.unplugAfter, afterWrite: o.afterWrite ?? "FM-1_900",
-            stallAfter: o.stallAfter, badAddr: o.badAddr, refuseArm: o.refuseArm, stuck: o.stuck,
-            step1: o.step1 ?? [[0, 64], [0x40, 160], [0x1000, 512]]});   // the running firmware's reads in step 1
+            stallAfter: o.stallAfter, badAddr: o.badAddr, refuseArm: o.refuseArm, stuck: o.stuck});
         Object.assign(this, {armed: false, arms: [], served: 0, bad: 0, upgrades: 0, sent: [], links: [], gen: 0});
         this.boot(o.identity ?? "FM-1_015", o.name ?? "FM-1");
     }
@@ -80,7 +79,7 @@ class FakeFM1 {
             const first = this.badAddr ?? 0;
             this.queue = this.identity.startsWith("ota-")
                 ? [...Array.from({length: 6}, (_, k) => [first + k * 512, 512]), [I.FINISH_WRITE, 8]]
-                : [...this.step1, [I.FINISH_CHECK, 8]];
+                : [[0, 64], [0x40, 160], [0x1000, 512], [I.FINISH_CHECK, 8]];
             this.next();
         } else if (this.waiting) {
             const [addr, n] = this.waiting;
@@ -122,9 +121,8 @@ function makePackage(product = "FM-1_900", marker = true, size = 0x2000) {
     return raw;
 }
 
-async function attempt(dev, pkg, stockNames) {
+async function attempt(dev, pkg) {
     const up = new I.Updater(dev), steps = [];
-    if (stockNames) up.stockNames = stockNames;
     try {
         const d = await up.find();
         if (!d) return {code: "notfound", steps};
@@ -207,33 +205,27 @@ async function attempt(dev, pkg, stockNames) {
     ok(r.code === "open" && dev.arms.length === 0 && dev.upgrades === 0, "Open -> one of ours: refused, nothing sent (stock first)");
 }
 
-{   // back to stock from FM1-TRAX: V15 or V16; the one for the other bootloader is turned away by the firmware while
-    // it reads the bootloader (ota.c), and the installer says which one to use
-    const mk = (product, size) => {
-        const raw = makePackage(product, false, size);
-        return {product, image: I.logicalImage(raw), digest: createHash("sha256").update(raw).digest("hex")};
-    };
-    const v15 = mk("FM-1_015", 0x5000), v16 = mk("FM-1_016", 0x5400);
-    const names = {[v15.digest]: "V15", [v16.digest]: "V16"};
-    // ota_stage: the UFW header (2 reads), the loader's head (1), then the bootloader, 32 x 512 B
-    const step1 = [[0, 512], [512, 512], [0x1000, 512], ...Array.from({length: 32}, (_, k) => [0x400 + k * 512, 512])];
-    for (const p of [v15, v16]) {
-        const dev = new FakeFM1(p.image, {identity: "FM-1_601", afterWrite: p.product, step1}), r = await attempt(dev, p, names);
-        ok(r.code === 0 && dev.bad === 0 && r.done === p.product, `FM1-TRAX -> stock ${p.product}: installed`);
+{   // back to M-VAVE's official V15 or V16 from FM1-TRAX: the exact files only
+    const v16Raw = makePackage("FM-1_016", false), real = I.OFFICIAL["FM-1_016"];
+    I.OFFICIAL["FM-1_016"] = createHash("sha256").update(v16Raw).digest("hex");   // stand-in for the real V16
+    try {
+        const v16 = await I.loadPackage(v16Raw);
+        const dev = new FakeFM1(v16.image, {identity: "FM-1_601", afterWrite: "FM-1_016"}), r = await attempt(dev, v16);
+        ok(r.code === 0 && dev.bad === 0, "FM1-TRAX -> stock V16, no force needed");
+        const changed = v16Raw.slice();
+        changed[changed.length - 1] ^= 1;
+        let code = null;
+        try { await I.loadPackage(changed); } catch (e) { code = e.code; }
+        ok(code === "badpkg", "a changed V16 -> 'badpkg'");
+    } finally { I.OFFICIAL["FM-1_016"] = real; }
+    ok(I.OFFICIAL["FM-1_015"] === "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a"
+        && I.OFFICIAL["FM-1_016"] === "d017fb65e70aca97ee29d944470c3515a74581df5c0576bf70de917c7b2b61d5",
+        "the stock packages' SHA-256: V15 and V16");
+    const dir = process.env.FM1_STOCK_DIR;
+    if (dir) for (const f of (await import("node:fs")).readdirSync(dir).filter(n => n.endsWith(".fwsc")).sort()) {
+        const raw = readFileSync(`${dir}/${f}`), pkg = await I.loadPackage(raw);
+        ok(I.OFFICIAL[pkg.product] === pkg.digest && !pkg.loader, `${f}: ${pkg.product} is pinned, loads without force`);
     }
-    for (const [p, mine, other, at] of [[v15, "V15", "V16", 4], [v16, "V16", "V15", 35]]) {
-        const dev = new FakeFM1(p.image, {identity: "FM-1_601", step1, stallAfter: at}), r = await attempt(dev, p, names);
-        ok(r.code === "stock" && r.msg.includes(`${other}'s bootloader`) && r.msg.includes(`unmodified ${other}`),
-            `${mine} on a unit with ${other}'s bootloader (stops at read ${at}) -> 'stock', names ${other}`);
-    }
-    let r = await attempt(new FakeFM1(v16.image, {identity: "FM-1_601", step1, stallAfter: 2}), v16, names);
-    ok(r.code === "stopped" && !r.msg.includes("bootloader"), "a stop in the header's reads stays a plain stop");
-    const ours = await I.loadPackage(makePackage());
-    r = await attempt(new FakeFM1(ours.image, {identity: "FM-1_601", step1, stallAfter: 10}), ours, names);
-    ok(r.code === "stopped" && !r.msg.includes("bootloader"), "... and so does one of ours");
-    ok(I.STOCK_NAMES["db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a"] === "V15"
-        && I.STOCK_NAMES["d017fb65e70aca97ee29d944470c3515a74581df5c0576bf70de917c7b2b61d5"] === "V16"
-        && Object.keys(I.STOCK_NAMES).length === 2, "the stock packages' SHA-256: V15 and V16");
 }
 
 if (existsSync("web/fm1trax.fwsc")) {
