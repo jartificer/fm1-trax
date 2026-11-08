@@ -19,6 +19,22 @@ export const PORT_RE = /fm-?1|felucca|ota|composite|sinco|usb-midi/i;   // never
 export const OPEN_RE = /^FM1_(OFFICIAL_OPEN|COMMUNITY_\d+)$/;
 export const STOCK = "FM-1_015";
 export const STOCK_SHA256 = "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a";
+// M-VAVE's FM-1 V16 (FM-1_016, FM-1.fwsc at m-vave.com since 2026-10-21) is the other way back to stock. Each version
+// brings its own bootloader, which M-VAVE's loader writes, and the running firmware (firmware/src/ota.c) takes a stock
+// package only when its bootloader is the one the FM-1 already has: V15 on a unit V16 has started is refused, and back
+export const STOCK_V16 = "FM-1_016";
+export const STOCK_V16_SHA256 = "d017fb65e70aca97ee29d944470c3515a74581df5c0576bf70de917c7b2b61d5";
+export const STOCK_NAMES = {[STOCK_SHA256]: "V15", [STOCK_V16_SHA256]: "V16"};
+
+// why a stock package was turned away in step 1, from where the reads stopped (ota.c ota_stage: the UFW header's 2
+// reads, the loader's 1, then the bootloader's 32, compared with the FM-1's own): an InstallError, or null
+export function stockRefusal(digest, e, names = STOCK_NAMES) {
+    const name = digest ? names[digest] : undefined;
+    if (!name || !e || e.code !== "stopped" || !(e.served >= 4 && e.served <= 35)) return null;
+    const other = name === "V15" ? "V16" : "V15";
+    return new InstallError("stock", `the FM-1 has ${other}'s bootloader, so it takes M-VAVE's ${other} only, not ` +
+        `${name}: install the unmodified ${other} package instead (FM-1.fwsc); nothing was written`);
+}
 
 // milliseconds; the tests shorten them
 export const DELAY = {open: 300, start: 2000, reply: 10, loader: 3000, reboot: 3000, retry: 1000,
@@ -146,9 +162,9 @@ export async function loadPackage(raw, force = false) {
         throw new InstallError("badpkg", `not an FM-1 package (identity ${JSON.stringify(product)})`);
     const digest = hex(new Uint8Array(await crypto.subtle.digest("SHA-256", raw)));
     const loader = contains(raw, LOADER_MARK);
-    if (!loader && !force && digest !== STOCK_SHA256)
+    if (!loader && !force && !(digest in STOCK_NAMES))
         throw new InstallError("badpkg", "no Felucca update loader in this package; only Felucca's own packages " +
-            "and M-VAVE's FM-1 V15 are installed");
+            "and M-VAVE's FM-1 V15 and V16 are installed");
     return {product, image: logicalImage(raw), digest, loader, size: raw.length};
 }
 
@@ -329,9 +345,12 @@ export class Updater {
         const [served, finished, lost] = await this.serve(dev.link, image, FINISH_CHECK, DELAY.idle_check,
             k => step("check", k));
         dev.link.close();
-        if (!finished)
-            throw new InstallError(lost ? "lost" : "stopped", `the FM-1 ${lost ? "was disconnected" : "stopped answering"} ` +
+        if (!finished) {
+            const e = new InstallError(lost ? "lost" : "stopped", `the FM-1 ${lost ? "was disconnected" : "stopped answering"} ` +
                 `after ${served} requests; nothing was written`);
+            e.served = served;
+            throw e;
+        }
         step("loader");
         await sleep(DELAY.loader);
         const ota = await this.waitFor(i => i.loader, DELAY.wait_loader);
@@ -396,7 +415,12 @@ export class Updater {
             throw new InstallError("model", `the device is ${dev.id.text}, the package is for ${product}`);
         }
         if (dev.id.open) await this.arm(dev, image, product, digest);
-        const ota = dev.id.loader ? dev : await this.check(dev, image, step);
+        let ota;
+        try {
+            ota = dev.id.loader ? dev : await this.check(dev, image, step);
+        } catch (e) {
+            throw stockRefusal(digest, e, this.stockNames) || e;
+        }
         await this.write(ota, image, step);
         return this.verify(product, step);
     }

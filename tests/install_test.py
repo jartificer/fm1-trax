@@ -66,10 +66,11 @@ class FakeFM1:
     """a MIDI backend with one FM-1 on it"""
 
     def __init__(self, image, identity="FM-1_015", name="FM-1", unplug_after=None, after_write="FM-1_900",
-                 stall_after=None, bad_addr=None, refuse_arm=False):
+                 stall_after=None, bad_addr=None, refuse_arm=False, step1=None):
         self.image, self.unplug_after, self.after_write = image, unplug_after, after_write
         self.refuse_arm, self.armed, self.arms = refuse_arm, False, []
         self.stall_after, self.bad_addr = stall_after, bad_addr
+        self.step1 = step1 or [(0, 64), (0x40, 160), (0x1000, 512)]     # the running firmware's reads in step 1
         self.served = self.bad = self.upgrades = 0
         self.sent, self.links, self.gen, self.lock = [], [], 0, threading.Lock()
         self.boot(identity, name)
@@ -112,7 +113,7 @@ class FakeFM1:
             first = self.bad_addr if self.bad_addr is not None else 0
             self.queue = ([(first + k * 512, 512) for k in range(6)] + [(I.FINISH_WRITE, 8)]
                           if self.identity.startswith("ota-")
-                          else [(0, 64), (0x40, 160), (0x1000, 512), (I.FINISH_CHECK, 8)])
+                          else list(self.step1) + [(I.FINISH_CHECK, 8)])
             self.next()
         elif self.waiting:
             u = I.unpack7(d[1:-1])
@@ -288,8 +289,9 @@ def from_open():
     """M-VAVE's FM1 Open firmware: back to stock V15 only, after arming its updater"""
     stock_raw = package("FM-1_015", marker=False)
     stock, ours = pkgfile("FM-1.fwsc", stock_raw), pkgfile("ours.fwsc", package())
-    real = I.STOCK_SHA256
+    real, names = I.STOCK_SHA256, I.STOCK_NAMES
     I.STOCK_SHA256 = __import__("hashlib").sha256(stock_raw).hexdigest()     # stand-in for the real V15
+    I.STOCK_NAMES = {I.STOCK_SHA256: "V15", I.STOCK_V16_SHA256: "V16"}
     try:
         image = I.logical_image(stock_raw)
         dev = FakeFM1(image, identity="FM1_OFFICIAL_OPEN", name="FM1 Community", after_write="FM-1_015")
@@ -309,7 +311,42 @@ def from_open():
         rc, out, err = cli(["--info"], FakeFM1(image, identity="FM1_OFFICIAL_OPEN", name="FM1 Community"))
         ok(rc == 0 and "FM1_OFFICIAL_OPEN" in out, "--info finds Open on its own port name")
     finally:
-        I.STOCK_SHA256 = real
+        I.STOCK_SHA256, I.STOCK_NAMES = real, names
+
+
+def to_stock():
+    """back to stock from FM1-TRAX: M-VAVE's V15 or V16, without --force; the one for the other bootloader is
+    turned away by the firmware while it reads the bootloader (ota.c), and the installer says which one to use"""
+    import hashlib
+    v15_raw, v16_raw = package("FM-1_015", marker=False, size=0x5000), package("FM-1_016", marker=False, size=0x5400)
+    v15, v16 = pkgfile("V15.fwsc", v15_raw), pkgfile("V16.fwsc", v16_raw)
+    names = I.STOCK_NAMES
+    I.STOCK_NAMES = {hashlib.sha256(v15_raw).hexdigest(): "V15", hashlib.sha256(v16_raw).hexdigest(): "V16"}
+    # ota_stage: the UFW header (2 reads), the loader's head (1), then the bootloader, 32 x 512 B
+    head = [(0, 512), (512, 512), (0x1000, 512)] + [(0x400 + k * 512, 512) for k in range(32)]
+    try:
+        for raw, path, ident in ((v15_raw, v15, "FM-1_015"), (v16_raw, v16, "FM-1_016")):
+            dev = FakeFM1(I.logical_image(raw), identity="FM-1_601", name="FM-1", after_write=ident, step1=head)
+            rc, out, err = cli([path, "--yes"], dev)
+            ok(rc == 0 and dev.bad == 0 and f"done: the FM-1 runs {ident}" in out,
+               f"FM1-TRAX -> stock {ident}: installed, no --force needed")
+        for raw, path, mine, other, at in ((v15_raw, v15, "V15", "V16", 3 + 1), (v16_raw, v16, "V16", "V15", 3 + 32)):
+            dev = FakeFM1(I.logical_image(raw), identity="FM-1_601", name="FM-1", step1=head, stall_after=at)
+            rc, out, err = cli([path, "--yes"], dev)
+            ok(rc == 6 and f"{other}'s bootloader" in err and f"unmodified {other}" in err and "nothing was written" in err
+               and dev.upgrades == 1, f"{mine} on a unit with {other}'s bootloader (stops at read {at}) -> exit 6, names {other}")
+        dev = FakeFM1(I.logical_image(v16_raw), identity="FM-1_601", name="FM-1", step1=head, stall_after=2)
+        rc, out, err = cli([v16, "--yes"], dev)
+        ok(rc == 4 and "stopped answering" in err and "bootloader" not in err,
+           "a stop in the header's reads stays a plain stop (exit 4)")
+        dev = FakeFM1(I.logical_image(package()), identity="FM-1_601", name="FM-1", step1=head, stall_after=10)
+        rc, out, err = cli([pkgfile("ours.fwsc", package()), "--yes"], dev)
+        ok(rc == 4 and "bootloader" not in err, "... and so does one of ours")
+    finally:
+        I.STOCK_NAMES = names
+    ok(I.STOCK_NAMES == {"db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a": "V15",
+                         "d017fb65e70aca97ee29d944470c3515a74581df5c0576bf70de917c7b2b61d5": "V16"},
+       "the stock packages' SHA-256: V15 and V16")
 
 
 def built_package():
@@ -327,6 +364,7 @@ wire()
 installs()
 errors()
 from_open()
+to_stock()
 built_package()
 shutil.rmtree(TMP, ignore_errors=True)
 print(f"INSTALL TESTS FAILED ({failed})" if failed else "install tests passed")

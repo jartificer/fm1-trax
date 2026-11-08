@@ -78,6 +78,7 @@ else
     echo "  skip update-path tests (no build/fm1trax.fwsc: run ./build.sh)"
 fi
 run installer python3 tests/install_test.py
+run rescue python3 tests/rescue_test.py
 run host-build sh host/build_host.sh
 for s in tests/scenarios/*.fd; do
     n=$(basename "$s" .fd)

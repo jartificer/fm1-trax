@@ -143,7 +143,13 @@ RAMINL int fl_wait_ready(uint32_t max_us, uint32_t *took_us)
 
 /* ---- entry points: IRQs OFF, args/buffers in RAM ---- */
 
-static RAMFN uint32_t fl_jedec_ram(void)                 /* expect 0x856014 */
+/* the FM-1's 1 MiB flash: Puya P25Q80H on the first units, UCUN UC25HQ80 on those sold since
+ * autumn 2026 (logo on the front). Same size, sectors, pages and commands (03/0B 02 20 05 35 06 9F). */
+#define FL_ID_PUYA 0x856014u
+#define FL_ID_UCUN 0xB36014u
+#define FL_ID_OK(id) ((id) == FL_ID_PUYA || (id) == FL_ID_UCUN)
+
+static RAMFN uint32_t fl_jedec_ram(void)                 /* expect FL_ID_OK */
 {
     fl_saved_t s; uint32_t id;
     if (fl_enter(&s)) return 0;

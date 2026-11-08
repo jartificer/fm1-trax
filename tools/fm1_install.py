@@ -17,7 +17,8 @@ install finishes the write. Needs mido with python-rtmidi.
 
 Exit codes: 0 done, 1 cancelled or other error, 2 bad arguments or package,
 3 FM-1 not found, 4 connection lost or the device stopped, 5 timeout (no
-loader / no restart), 6 wrong model, or another identity after the install.
+loader / no restart), 6 wrong model, another identity after the install, or a stock
+package for the other bootloader (V15 on a unit V16 has started, or back).
 """
 import argparse
 import hashlib
@@ -46,8 +47,14 @@ DELAY = {"open": 0.3, "start": 2.0, "reply": 0.01, "loader": 3.0, "reboot": 3.0,
 OPEN_RE = re.compile(r"FM1_(OFFICIAL_OPEN|COMMUNITY_\d+)")
 STOCK = "FM-1_015"
 STOCK_SHA256 = "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a"
+# M-VAVE's FM-1 V16 (FM-1_016, FM-1.fwsc at m-vave.com since 2026-10-21) is the other way back to stock. Each version
+# brings its own bootloader, which M-VAVE's loader writes, and the running firmware (firmware/src/ota.c) takes a stock
+# package only when its bootloader is the one the FM-1 already has: V15 on a unit V16 has started is refused, and back
+STOCK_V16 = "FM-1_016"
+STOCK_V16_SHA256 = "d017fb65e70aca97ee29d944470c3515a74581df5c0576bf70de917c7b2b61d5"
+STOCK_NAMES = {STOCK_SHA256: "V15", STOCK_V16_SHA256: "V16"}
 
-EXIT = {"usage": 2, "badpkg": 2, "notfound": 3, "model": 6, "open": 6, "lost": 4, "stopped": 4, "badreq": 4,
+EXIT = {"usage": 2, "badpkg": 2, "notfound": 3, "model": 6, "open": 6, "lost": 4, "stopped": 4, "badreq": 4, "stock": 6,
         "noloader": 5, "noreturn": 5, "mismatch": 6}
 
 
@@ -357,9 +364,11 @@ class Updater:
                                             lambda k, end: step("check", k))
         dev.link.close()
         if not finished:
-            raise InstallError("lost" if lost else "stopped",
-                               f"the FM-1 {'was disconnected' if lost else 'stopped answering'} after "
-                               f"{served} requests; nothing was written")
+            e = InstallError("lost" if lost else "stopped",
+                             f"the FM-1 {'was disconnected' if lost else 'stopped answering'} after "
+                             f"{served} requests; nothing was written")
+            e.served = served
+            raise e
         step("loader")
         time.sleep(DELAY["loader"])
         ota = self.wait_for(lambda i: i.loader, DELAY["wait_loader"])
@@ -419,9 +428,23 @@ class Updater:
             raise InstallError("model", f"the device is {dev.id.text}, the package is for {product}")
         if dev.id.open:
             self.arm(dev, image, product, digest)
-        ota = dev if dev.id.loader else self.check(dev, image, step)
+        try:
+            ota = dev if dev.id.loader else self.check(dev, image, step)
+        except InstallError as e:
+            raise stock_refusal(digest, e) or e
         self.write(ota, image, step)
         return self.verify(product, step)
+
+
+def stock_refusal(digest, e):
+    """why a stock package was turned away in step 1, from where the reads stopped (ota.c ota_stage: the UFW header's
+    2 reads, the loader's 1, then the bootloader's 32, compared with the FM-1's own): an InstallError, or None"""
+    name = STOCK_NAMES.get(digest.hex()) if digest else None
+    if not name or e.code != "stopped" or not 4 <= getattr(e, "served", 0) <= 35:
+        return None
+    other = "V16" if name == "V15" else "V15"
+    return InstallError("stock", f"the FM-1 has {other}'s bootloader, so it takes M-VAVE's {other} only, not {name}: "
+                                 f"install the unmodified {other} package instead (FM-1.fwsc); nothing was written")
 
 
 # ------------------------------------------------------------------- CLI ---
@@ -435,9 +458,9 @@ def load_package(path, force):
     if not re.fullmatch(r"[^_]+_\d+", product):
         raise InstallError("badpkg", f"{path}: not an FM-1 package (identity {product!r})")
     digest = hashlib.sha256(raw).digest()
-    if LOADER_MARK not in raw and not force and digest != bytes.fromhex(STOCK_SHA256):
-        raise InstallError("badpkg", f"{path}: no Felucca update loader in this package; "
-                                     "only Felucca's own packages and M-VAVE's FM-1 V15 are installed (--force overrides)")
+    if LOADER_MARK not in raw and not force and digest.hex() not in STOCK_NAMES:
+        raise InstallError("badpkg", f"{path}: no Felucca update loader in this package; only Felucca's own "
+                                     "packages and M-VAVE's FM-1 V15 and V16 are installed (--force overrides)")
     return product, logical_image(raw), digest
 
 

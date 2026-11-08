@@ -8,7 +8,7 @@ The bundle holds:
 
 - `fm1trax.fwsc`: the firmware package
 - `fm1_install.py`: the installer, which sends the package to the FM-1 over USB MIDI
-- `fm1_rescue.py`: the last-resort recovery tool (macOS only; see "If something goes wrong")
+- `fm1_rescue.py`: the last-resort recovery tool (macOS or Linux; see "If something goes wrong")
 - `LICENSE`: the GNU GPL-3.0, which FM1-TRAX is under
 
 **No warranty.** FM1-TRAX comes "as is", without warranty of any kind. Installing custom firmware can
@@ -28,6 +28,10 @@ bundle instead.
   ready-built for those versions. With Python 3.13 or newer, pip has to compile it, which needs a
   C++ compiler; installing Python 3.12 next to it is simpler.
 - Close any app that uses the FM-1's MIDI port (a DAW, the M-VAVE app, a web page with Web MIDI).
+
+FM1-TRAX knows both flash chips the FM-1 has shipped with: the Puya P25Q80H of the first units
+and the UCUN UC25HQ80 of FM-1s sold since autumn 2026 (logo on the front). On a unit with any other
+flash it still plays, but nothing is saved and it cannot be updated from FM1-TRAX itself.
 
 ## Windows
 
@@ -98,10 +102,14 @@ The FM1-TRAX web page has the same installer, over Web MIDI, in Chrome, Edge or 
   **safe mode** (no sound, USB on), so the installer can reach it: install again, or install M-VAVE's
   stock firmware. PLAY tries FM1-TRAX again.
 - **Last resort**: after four failed starts the FM-1 enters the chip's own update mode.
-  `fm1_rescue.py` writes the stock firmware back through it, from a Mac; its first lines explain how
-  (it needs M-VAVE's FM-1 V15 package, `FM-1.fwsc`, from m-vave.com/download).
+  `fm1_rescue.py` writes the stock firmware back through it, from a Mac or Linux; its first lines explain
+  how. Give it M-VAVE's FM-1 packages (V16 from m-vave.com/download, and V15 if you have it): it writes
+  the one whose bootloader the FM-1 already has. `fm1_rescue.sh` fetches them for you.
 
 ## Going back to the stock firmware
 
 Install M-VAVE's stock package the same way (`fm1_install.py FM-1.fwsc`), or use M-VAVE's own updater.
+Both V15 and V16 are taken, but each brings its own bootloader, and an FM-1 takes only the version whose
+bootloader it already has: one that has ever run V16 goes back to V16, one that never has to V15. Install
+the other one and nothing is written; the installer says which one to use.
 The installer works from the stock firmware and from any Felucca-based firmware (FM1-GM, X0X, FoMni).
