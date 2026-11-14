@@ -168,3 +168,5 @@ The tests compare the YM2612 emulation with [Nuked-OPN2](https://github.com/nuke
 
 M-VAVE, Sega, Mega Drive and Genesis are trademarks of their owners. This project is not affiliated
 with them.
+
+You can also try FM1-TRAX in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
